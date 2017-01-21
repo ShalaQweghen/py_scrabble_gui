@@ -1,5 +1,4 @@
 class Board:
-
 	def __init__(self):
 		self.prepare_board()
 		self.place_bonus()
@@ -39,7 +38,7 @@ class Board:
 		rcd = u'\u255D'
 		row_number = 15
 		print('\n     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o')
-		print('   {0}'.format(lcu + t_line * 14 + ver * 3 + rcu))
+		print('   {}'.format(lcu + t_line * 14 + ver * 3 + rcu))
 		for row in self.rows:
 			if row_number < 10:
 				print('{}  '.format(row_number), end='')
@@ -59,7 +58,7 @@ class Board:
 			print('{} {}'.format(hor, row_number))
 			row_number -= 1
 			if row_number > 0:
-				print('   {0}'.format(lcm + m_line * 14 + ver * 3 + rcm))
+				print('   {}'.format(lcm + m_line * 14 + ver * 3 + rcm))
 			else:
-				print('   {0}'.format(lcd + b_line * 14 + ver * 3 + rcd))
+				print('   {}'.format(lcd + b_line * 14 + ver * 3 + rcd))
 		print('     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o')

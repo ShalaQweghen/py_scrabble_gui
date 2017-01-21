@@ -1,5 +1,4 @@
 class Bag:
-
 	def __init__(self):
 		self.bag = []
 		self.fill_bag()
