@@ -1,9 +1,9 @@
 class Board:
 	def __init__(self):
-		self.prepare_board()
-		self.place_bonus()
+		self._prepare_board()
+		self._place_bonus()
 
-	def prepare_board(self):
+	def _prepare_board(self):
 		self.board = {}
 		self.rows = []
 		for i in range(1,16):
@@ -13,7 +13,7 @@ class Board:
 				row.append(chr(l) + str(i))
 			self.rows.append(row)
 
-	def place_bonus(self):
+	def _place_bonus(self):
 		for key in self.board:
 			if key in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
 				self.board[key] = '3w'
@@ -25,17 +25,15 @@ class Board:
 				self.board[key] = '2l'
 
 	def display(self):
+		# Components of the board outline
 		t_line = u'\u2550\u2550\u2550\u2566'
 		m_line = u'\u2550\u2550\u2550\u256C'
 		b_line = u'\u2550\u2550\u2550\u2569'
-		hor = u'\u2551'
-		ver = u'\u2550'
-		lcu = u'\u2554'
-		rcu = u'\u2557'
-		lcm = u'\u2560'
-		rcm = u'\u2563'
-		lcd = u'\u255A'
-		rcd = u'\u255D'
+		hor, ver = u'\u2551', u'\u2550'
+		lcu, rcu = u'\u2554', u'\u2557'
+		lcm, rcm = u'\u2560', u'\u2563'
+		lcd, rcd = u'\u255A', u'\u255D'
+
 		row_number = 15
 		print('\n     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o')
 		print('   {}'.format(lcu + t_line * 14 + ver * 3 + rcu))
@@ -44,6 +42,7 @@ class Board:
 				print('{}  '.format(row_number), end='')
 			else:
 				print('{} '.format(row_number), end='')
+
 			for spot in row:
 				if self.board[spot] == '3w':
 					print('{}\x1b[31m{} \x1b[00m'.format(hor, self.board[spot]), end='')
@@ -55,7 +54,9 @@ class Board:
 					print('{}\x1b[36m{} \x1b[00m'.format(hor, self.board[spot]), end='')
 				else:
 					print('{}\033[1m {} \033[0m'.format(hor, self.board[spot]), end='')
+
 			print('{} {}'.format(hor, row_number))
+
 			row_number -= 1
 			if row_number > 0:
 				print('   {}'.format(lcm + m_line * 14 + ver * 3 + rcm))

@@ -1,7 +1,7 @@
 import random, sys, re
 
 class Player:
-	def __init__(self, inp=sys.stdin, outp=sys.stdout):
+	def __init__(self, inp=sys.stdin, outp=sys.stdout, name=None):
 		self.letters = []
 		self.score = 0
 		self.input = inp
@@ -9,7 +9,7 @@ class Player:
 		self.turn_pointer = 0
 		self.is_passing = False
 		self.is_rejected = False
-		self.name = None
+		self.name = name
 
 	def pick_from(self, bag):
 		if bag:
