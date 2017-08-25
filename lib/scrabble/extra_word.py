@@ -16,7 +16,7 @@ def left_move(square):
 	else:
 		return chr(ord(square[0]) - 1) + square[1:]
 
-def left_move(square):
+def right_move(square):
 	if len(square) == 2:
 		return chr(ord(square[0]) + 1) + square[1]
 	else:

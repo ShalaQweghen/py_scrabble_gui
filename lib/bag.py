@@ -1,3 +1,5 @@
+import random
+
 class Bag:
 	def __init__(self):
 		self.bag = []
@@ -13,9 +15,9 @@ class Bag:
 		for i in range(9): self.bag.extend(['I','A'])
 		for i in range(12): self.bag.extend(['E'])
 
-	def remove(self, letters):
-		for l in letters:
-			self.bag.remove(l)
+	def draw(self):
+		random.shuffle(self.bag)
+		return self.bag.pop()
 
 	def put_back(self, letters):
 		self.bag.extend(letters)
