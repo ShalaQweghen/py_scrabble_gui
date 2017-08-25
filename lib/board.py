@@ -72,3 +72,7 @@ class Board:
 			else:
 				print('   {}'.format(lcd + b_line * 14 + ver * 3 + rcd))
 		print('     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o')
+
+	def place(self, letters, spots):
+		for l, s in zip(letters, spots):
+			self.board[s] = l
