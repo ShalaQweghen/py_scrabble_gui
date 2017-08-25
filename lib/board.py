@@ -6,21 +6,27 @@ class Board:
 	def _prepare_board(self):
 		self.board = {}
 		self.rows = []
+
 		for i in range(1,16):
 			row = []
+
 			for l in range(ord('a'), ord('p')):
 				self.board[chr(l) + str(i)] = ' '
 				row.append(chr(l) + str(i))
+
 			self.rows.append(row)
 
 	def _place_bonus(self):
 		for key in self.board:
 			if key in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
 				self.board[key] = '3w'
+
 			if key in 'b2 c3 d4 e5 b14 c13 d12 e11 n2 m3 l4 k5 n14 m13 l12 k11'.split():
 				self.board[key] = '2w'
+
 			if key in 'b6 b10 n6 n10 f2 f6 f10 f14 j2 j6 j10 j14'.split():
 				self.board[key] = '3l'
+
 			if key in 'a4 a12 c7 c9 d1 d8 d15 g3 g7 g9 g13 h4 h12 o4 o12 m7 m9 l1 l8 l15 i3 i7 i9 i13'.split():
 				self.board[key] = '2l'
 
@@ -35,8 +41,10 @@ class Board:
 		lcd, rcd = u'\u255A', u'\u255D'
 
 		row_number = 15
+
 		print('\n     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o')
 		print('   {}'.format(lcu + t_line * 14 + ver * 3 + rcu))
+
 		for row in self.rows:
 			if row_number < 10:
 				print('{}  '.format(row_number), end='')
@@ -58,6 +66,7 @@ class Board:
 			print('{} {}'.format(hor, row_number))
 
 			row_number -= 1
+
 			if row_number > 0:
 				print('   {}'.format(lcm + m_line * 14 + ver * 3 + rcm))
 			else:

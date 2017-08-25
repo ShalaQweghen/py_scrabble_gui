@@ -1,9 +1,9 @@
 class Bag:
 	def __init__(self):
 		self.bag = []
-		self.fill_bag()
+		self._fill_bag()
 
-	def fill_bag(self):
+	def _fill_bag(self):
 		self.bag.extend(['Q','Z','J','X','K'])
 		for i in range(2): self.bag.extend(['F','H','V','W','Y','B','C','M','P','@'])
 		for i in range(3): self.bag.extend(['G'])
@@ -12,3 +12,10 @@ class Bag:
 		for i in range(8): self.bag.extend(['O'])
 		for i in range(9): self.bag.extend(['I','A'])
 		for i in range(12): self.bag.extend(['E'])
+
+	def remove(self, letters):
+		for l in letters:
+			self.bag.remove(l)
+
+	def put_back(self, letters):
+		self.bag.extend(letters)
