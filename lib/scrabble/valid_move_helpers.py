@@ -35,7 +35,8 @@ def down_or_right(square, direction):
     return right_move(square)
 
 def occupied_up_or_left(direction, square, board):
-  return ord(board.board[up_or_left(square, direction)][0]) in range(65, 91)
+  return ord(board.board.get(up_or_left(square, direction), ['.'])[0]) in range(65, 91)
+
 
 def occupied_down_or_right(direction, square, board):
-  return ord(board.board[down_or_right(square, direction)][0]) in range(65, 91)
+  return ord(board.board.get(down_or_right(square, direction), ['.'])[0]) in range(65, 91)

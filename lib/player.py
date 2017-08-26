@@ -24,14 +24,21 @@ class Player:
 		player_input = self.input.readline()[:-1].upper()
 		passed_letters = list(re.sub('[^A-Z@]', '', player_input))
 
-		for l in passed_letters:
-			self.letters.remove(l)
+		if self._letters_on_rack(passed_letters):
+			for l in passed_letters:
+				self.letters.remove(l)
 
-		bag.put_back(passed_letters)
-		self.draw_letters(bag, len(passed_letters))
+			bag.put_back(passed_letters)
+			self.draw_letters(bag, len(passed_letters))
+		else:
+			self.output.write('\n==================================================================\n')
+			self.output.write("One or more letters are not on your rack...".center(70))
+			self.output.write('\n==================================================================\n')
+			self.get_move(bag)
 
-	def replace_wild_tile(self):
-		self.output.write("What letter will you use the wild tile for? ")
+
+	def replace_wild_tile(self, output):
+		output.write("What letter will you use the wild tile for? ")
 		self.wild_tile = self.input.readline()[:-1].upper()
 		self.word = re.sub('@', self.wild_tile, self.word)
 
@@ -44,15 +51,15 @@ class Player:
 
 		self.draw_letters(bag, len(self.word))
 
-	def _letters_on_rack(self):
-		if '@' in self.word:
-			self.replace_wild_tile()
+	def _letters_on_rack(self, word):
+		if '@' in word:
+			self.replace_wild_tile(self.output)
 
 		if self.wild_tile:
 			self.letters[self.letters.index('@')] = self.wild_tile
 
-		for l in self.word:
-			if l not in self.letters or self.word.count(l) > self.letters.count(l):
+		for l in word:
+			if l not in self.letters or word.count(l) > self.letters.count(l):
 				return False
 
 		if self.wild_tile:
@@ -69,8 +76,8 @@ class Player:
 
 		if len(player_input) < 3 or len(player_input) > 3:
 			if player_input[0] == 'pass':
-				self.is_passing = True
 				self.pass_letters(bag)
+				self.is_passing = True
 			elif player_input[0] == 'save':
 				pass
 			else:
@@ -87,7 +94,7 @@ class Player:
 				self.output.write("Your direction should be either 'r' for right or 'd' for down...".center(70))
 				self.output.write('\n==================================================================\n')
 				self.get_move(bag)
-			elif not self._letters_on_rack():
+			elif not self._letters_on_rack(self.word):
 				self.output.write('\n==================================================================\n')
 				self.output.write("One or more letters are not on your rack...".center(70))
 				self.output.write('\n==================================================================\n')

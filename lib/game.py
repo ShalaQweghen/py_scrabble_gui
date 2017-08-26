@@ -56,12 +56,19 @@ class Game:
 		self.current_player.get_move(self.bag)
 		if self.current_player.is_passing:
 			self.passes += 1
-		elif self.dict.valid_word(self.current_player.word) and self.valid_move():
-			self.board.place(self.current_player.word, set_word_range(self.current_player))
-			self.current_player.update_rack(self.bag)
+		elif self.dict.valid_word(self.current_player.word):
+			if self.valid_move():
+				self.board.place(self.current_player.word, set_word_range(self.current_player))
+				self.current_player.update_rack(self.bag)
+				self.passes = 0
+			else:
+				self.current_player.output.write('\n==================================================================\n')
+				self.current_player.output.write('Move was illegal...'.center(70))
+				self.current_player.output.write('\n==================================================================\n')
+				self.play_turn()
 		else:
 			self.current_player.output.write('\n==================================================================\n')
-			self.current_player.output.write('Word is not in dictionary'.center(70))
+			self.current_player.output.write('Word is not in dictionary...'.center(70))
 			self.current_player.output.write('\n==================================================================\n')
 			self.play_turn()
 
@@ -77,6 +84,13 @@ class Game:
 
 		return False
 
+	def enter_game_loop(self):
+		self.initialize_players()
+		while len(self.bag.bag) > 0 and self.passes != 3 * self.players:
+			self.initialize_turn()
+			self.display_turn_info()
+			self.play_turn()
+
 
 
 
@@ -84,12 +98,4 @@ class Game:
 
 
 g = Game()
-g.initialize_players()
-g.initialize_turn()
-g.display_turn_info()
-g.play_turn()
-g.initialize_turn()
-g.display_turn_info()
-g.play_turn()
-g.initialize_turn()
-g.display_turn_info()
+g.enter_game_loop()
