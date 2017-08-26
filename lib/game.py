@@ -55,7 +55,7 @@ class Game:
 		self.current_player.output.write("\t\t   \u2551 {} \u2551\n".format(' - '.join(self.current_player.letters)))
 
 	def play_turn(self):
-		self.current_player.get_move(self.bag)
+		self.current_player.get_move(self.bag, self.board)
 		self.word = self.current_player.word
 		self.word.board = self.board.board
 
@@ -82,7 +82,9 @@ class Game:
 			return self.word.start == 'h8'
 
 		for square in self.word.range:
-			if occupied_up_or_left(square, self.word):
+			if self.word.aob_list:
+				return True
+			elif occupied_up_or_left(square, self.word):
 				return True
 			elif occupied_down_or_right(square, self.word):
 				return True

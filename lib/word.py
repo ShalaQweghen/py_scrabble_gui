@@ -1,14 +1,12 @@
 class Word:
-  def __init__(self, player, start, direction, word):
-    self.player = player
+  def __init__(self, start, direction, word, board):
     self.start = start
     self.direction = direction
     self.word = word
-    self.board = None
+    self.board = board
     self.range = self.set_range()
-    self.already_on_board = []
+    self.aob_list = self.set_aob_list()
     self.extra_words = []
-    self.is_valid = False
 
   def set_range(self):
     if self.direction == "r":
@@ -31,7 +29,9 @@ class Word:
       last = int(self.start[1:]) - len(self.word)
       return list(map(lambda x: self.start[0] + str(x), list(range(int(self.start[1:]), last, -1))))
 
-  def set_already_on_board(self):
+  def set_aob_list(self):
+    aob_list = []
     for i, spot in enumerate(self.range):
       if self.board[spot] == self.word[i]:
-        self.already_on_board.append(word[i])
+        aob_list.append(self.word[i])
+    return aob_list

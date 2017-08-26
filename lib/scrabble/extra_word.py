@@ -17,13 +17,13 @@ def set_extra_word(square, word, extra_word):
 
 def check_extra_word(word, word_list, dic):
 	check_list = []
-	not_discard_list_clone = word.already_on_board.copy()
+	aob_list = word.aob_list.copy()
 
 	for i, square in enumerate(word.range):
 		extra_word = [word.word[i]]
 
-		if word.board[square] in not_discard_list_clone and (occupied_up_or_left(square, word) or occupied_down_or_right(square, word)):
-			del not_discard_list_clone[not_discard_list_clone.index(word.board[square])]
+		if word.board[square] in aob_list and (occupied_up_or_left(square, word) or occupied_down_or_right(square, word)):
+			del aob_list[aob_list.index(word.board[square])]
 			check_list.append(True)
 		elif not occupied_up_or_left(square, word) and not occupied_down_or_right(square, word):
 			check_list.append(True)
