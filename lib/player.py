@@ -15,11 +15,7 @@ class Player:
 		if bag:
 			return bag.draw()
 
-	def draw_letters(self, bag, amount=7):
-		for i in range(amount):
-			self.letters.append(self._pick_from(bag))
-
-	def pass_letters(self, bag):
+	def _pass_letters(self, bag):
 		self.output.write('\nEnter the letter(s) you want to pass: ')
 		player_input = self.input.readline()[:-1].upper()
 		passed_letters = list(re.sub('[^A-Z@]', '', player_input))
@@ -36,11 +32,30 @@ class Player:
 			self.output.write('\n==================================================================\n')
 			self.get_move(bag)
 
-
-	def replace_wild_tile(self, output):
-		output.write("What letter will you use the wild tile for? ")
+	def _replace_wild_tile(self):
+		self.output.write("\nWhat letter will you use the wild tile for? ")
 		self.wild_tile = self.input.readline()[:-1].upper()
 		self.word = re.sub('@', self.wild_tile, self.word)
+
+	def _letters_on_rack(self, word=None):
+		if '@' in (word or self.word):
+			self._replace_wild_tile()
+
+		if self.wild_tile:
+			self.letters[self.letters.index('@')] = self.wild_tile
+
+		for l in (word or self.word):
+			if l not in self.letters or (word or self.word).count(l) > self.letters.count(l):
+				return False
+
+		if self.wild_tile:
+			self.letters[self.letters.index(self.wild_tile)] = '@'
+
+		return True
+
+	def draw_letters(self, bag, amount=7):
+		for i in range(amount):
+			self.letters.append(self._pick_from(bag))
 
 	def update_rack(self, bag):
 		if self.wild_tile:
@@ -51,22 +66,6 @@ class Player:
 
 		self.draw_letters(bag, len(self.word))
 
-	def _letters_on_rack(self, word):
-		if '@' in word:
-			self.replace_wild_tile(self.output)
-
-		if self.wild_tile:
-			self.letters[self.letters.index('@')] = self.wild_tile
-
-		for l in word:
-			if l not in self.letters or word.count(l) > self.letters.count(l):
-				return False
-
-		if self.wild_tile:
-			self.letters[self.letters.index(self.wild_tile)] = '@'
-
-		return True
-
 	def get_move(self, bag):
 		self.wild_tile = None
 		self.is_passing = False
@@ -76,7 +75,7 @@ class Player:
 
 		if len(player_input) < 3 or len(player_input) > 3:
 			if player_input[0] == 'pass':
-				self.pass_letters(bag)
+				self._pass_letters(bag)
 				self.is_passing = True
 			elif player_input[0] == 'save':
 				pass
@@ -94,7 +93,7 @@ class Player:
 				self.output.write("Your direction should be either 'r' for right or 'd' for down...".center(70))
 				self.output.write('\n==================================================================\n')
 				self.get_move(bag)
-			elif not self._letters_on_rack(self.word):
+			elif not self._letters_on_rack():
 				self.output.write('\n==================================================================\n')
 				self.output.write("One or more letters are not on your rack...".center(70))
 				self.output.write('\n==================================================================\n')
