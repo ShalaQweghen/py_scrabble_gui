@@ -30,18 +30,25 @@ class Player:
 		bag.put_back(passed_letters)
 		self.draw_letters(bag, len(passed_letters))
 
-	def update_letters(self, bag):
+	def update_rack(self, bag):
 		for l in self.word:
 			self.letters.remove(l)
 
 		self.draw_letters(bag, len(self.word))
+
+	def _letters_on_rack(self, word):
+		for l in word:
+			if l not in self.letters or word.count(l) > self.letters.count(l):
+				return False
+
+		return True
 
 	def get_move(self, bag):
 		self.is_passing = False
 		self.output.write('\nEnter your move (e.g. h8 r money): ')
 		player_input = self.input.readline()[:-1].lower().split()
 
-		if len(player_input) < 3:
+		if len(player_input) < 3 or len(player_input) > 3:
 			if player_input[0] == 'pass':
 				self.is_passing = True
 				self.pass_letters(bag)
@@ -58,6 +65,11 @@ class Player:
 			if self.direction not in ['r', 'd']:
 				self.output.write('\n==================================================================\n')
 				self.output.write("Your direction should be either 'r' for right or 'd' for down...".center(70))
+				self.output.write('\n==================================================================\n')
+				self.get_move(bag)
+			elif not self._letters_on_rack(self.word.upper()):
+				self.output.write('\n==================================================================\n')
+				self.output.write("One or more letters are not on your rack...".center(70))
 				self.output.write('\n==================================================================\n')
 				self.get_move(bag)
 			else:

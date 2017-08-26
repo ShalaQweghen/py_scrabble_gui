@@ -3,13 +3,14 @@ import random
 from bag import Bag
 from board import Board
 from player import Player
+from dic import Dict
 from scrabble.letter_word import *
 
 class Game:
 	def __init__(self, config={}):
 		self.board = Board()
 		self.bag = Bag()
-		self.dic = open('dic/sowpods.txt').read().splitlines()
+		self.dict = Dict('./lib/dic/sowpods.txt')
 		self.non_discard = []
 		self.word_list = []
 		self.turns = 0
@@ -54,9 +55,15 @@ class Game:
 		self.current_player.get_move(self.bag)
 		if self.current_player.is_passing:
 			self.passes += 1
-		else:
+		elif self.dict.valid_word(self.current_player.word):
 			self.board.place(self.current_player.word, ['h8', 'i8', 'j8'])
-			self.current_player.update_letters(self.bag)
+			self.current_player.update_rack(self.bag)
+		else:
+			self.current_player.output.write('\n==================================================================\n')
+			self.current_player.output.write('Word is not in dictionary'.center(70))
+			self.current_player.output.write('\n==================================================================\n')
+			self.play_turn()
+
 
 
 
