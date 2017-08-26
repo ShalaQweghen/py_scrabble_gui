@@ -5,6 +5,7 @@ from board import Board
 from player import Player
 from dic import Dict
 from scrabble.letter_word import *
+from scrabble.valid_move_helpers import *
 
 class Game:
 	def __init__(self, config={}):
@@ -27,7 +28,7 @@ class Game:
 
 	def initialize_players(self):
 		for p in range(self.players):
-			player = Player(name=input("What is Player's Name?"))
+			player = Player(name=input("What is Player's name? "))
 			player.draw_letters(self.bag)
 			self.players_list.append(player)
 
@@ -55,14 +56,27 @@ class Game:
 		self.current_player.get_move(self.bag)
 		if self.current_player.is_passing:
 			self.passes += 1
-		elif self.dict.valid_word(self.current_player.word):
-			self.board.place(self.current_player.word, ['h8', 'i8', 'j8'])
+		elif self.dict.valid_word(self.current_player.word) and self.valid_move():
+			self.board.place(self.current_player.word, set_word_range(self.current_player))
 			self.current_player.update_rack(self.bag)
 		else:
 			self.current_player.output.write('\n==================================================================\n')
 			self.current_player.output.write('Word is not in dictionary'.center(70))
 			self.current_player.output.write('\n==================================================================\n')
 			self.play_turn()
+
+	def valid_move(self):
+		if len(self.bag.bag) == 100 - 7 * self.players:
+			return self.current_player.start == 'h8'
+
+		for s in set_word_range(self.current_player):
+			if occupied_up_or_left(self.current_player.direction, s, self.board):
+				return True
+			elif occupied_down_or_right(self.current_player.direction, s, self.board):
+				return True
+
+		return False
+
 
 
 

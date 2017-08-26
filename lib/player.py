@@ -6,7 +6,7 @@ class Player:
 		self.score = 0
 		self.input = inp
 		self.output = outp
-		self.turn_pointer = 0
+		self.wild_tile = None
 		self.is_passing = False
 		self.is_rejected = False
 		self.name = name
@@ -20,7 +20,7 @@ class Player:
 			self.letters.append(self._pick_from(bag))
 
 	def pass_letters(self, bag):
-		self.output.write('\nEnter the letter(s) you want to pass:')
+		self.output.write('\nEnter the letter(s) you want to pass: ')
 		player_input = self.input.readline()[:-1].upper()
 		passed_letters = list(re.sub('[^A-Z@]', '', player_input))
 
@@ -30,21 +30,40 @@ class Player:
 		bag.put_back(passed_letters)
 		self.draw_letters(bag, len(passed_letters))
 
+	def replace_wild_tile(self):
+		self.output.write("What letter will you use the wild tile for? ")
+		self.wild_tile = self.input.readline()[:-1].upper()
+		self.word = re.sub('@', self.wild_tile, self.word)
+
 	def update_rack(self, bag):
+		if self.wild_tile:
+			self.letters[self.letters.index('@')] = self.wild_tile
+
 		for l in self.word:
 			self.letters.remove(l)
 
 		self.draw_letters(bag, len(self.word))
 
-	def _letters_on_rack(self, word):
-		for l in word:
-			if l not in self.letters or word.count(l) > self.letters.count(l):
+	def _letters_on_rack(self):
+		if '@' in self.word:
+			self.replace_wild_tile()
+
+		if self.wild_tile:
+			self.letters[self.letters.index('@')] = self.wild_tile
+
+		for l in self.word:
+			if l not in self.letters or self.word.count(l) > self.letters.count(l):
 				return False
+
+		if self.wild_tile:
+			self.letters[self.letters.index(self.wild_tile)] = '@'
 
 		return True
 
 	def get_move(self, bag):
+		self.wild_tile = None
 		self.is_passing = False
+
 		self.output.write('\nEnter your move (e.g. h8 r money): ')
 		player_input = self.input.readline()[:-1].lower().split()
 
@@ -61,19 +80,18 @@ class Player:
 				self.get_move(bag)
 		else:
 			self.start, self.direction, self.word = player_input
+			self.word = self.word.upper()
 
 			if self.direction not in ['r', 'd']:
 				self.output.write('\n==================================================================\n')
 				self.output.write("Your direction should be either 'r' for right or 'd' for down...".center(70))
 				self.output.write('\n==================================================================\n')
 				self.get_move(bag)
-			elif not self._letters_on_rack(self.word.upper()):
+			elif not self._letters_on_rack():
 				self.output.write('\n==================================================================\n')
 				self.output.write("One or more letters are not on your rack...".center(70))
 				self.output.write('\n==================================================================\n')
 				self.get_move(bag)
-			else:
-				self.word = self.word.upper()
 
 	def __str__(self):
 		return '{} has got {} points.'.format(self.name, self.score).center(70)

@@ -16,6 +16,8 @@ class Board:
 
 			self.rows.append(row)
 
+		self.rows.reverse()
+
 	def _place_bonus(self):
 		for key in self.board:
 			if key in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
