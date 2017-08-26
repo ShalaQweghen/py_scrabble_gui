@@ -4,8 +4,9 @@ from bag import Bag
 from board import Board
 from player import Player
 from dic import Dict
-from scrabble.letter_word import *
+from word import Word
 from scrabble.valid_move_helpers import *
+from scrabble.extra_word import *
 
 class Game:
 	def __init__(self, config={}):
@@ -37,6 +38,7 @@ class Game:
 	def initialize_turn(self):
 		self.current_player = self.players_list[self.turns % self.players]
 		self.turns += 1
+		self.word_list = []
 		self.board.display()
 
 	def display_turn_info(self):
@@ -54,11 +56,14 @@ class Game:
 
 	def play_turn(self):
 		self.current_player.get_move(self.bag)
+		self.word = self.current_player.word
+		self.word.board = self.board.board
+
 		if self.current_player.is_passing:
 			self.passes += 1
-		elif self.dict.valid_word(self.current_player.word):
-			if self.valid_move():
-				self.board.place(self.current_player.word, set_word_range(self.current_player))
+		elif self.dict.valid_word(self.word.word):
+			if self.valid_move() and check_extra_word(self.word, self.word_list, self.dict):
+				self.board.place(self.word.word, self.word.range)
 				self.current_player.update_rack(self.bag)
 				self.passes = 0
 			else:
@@ -74,12 +79,12 @@ class Game:
 
 	def valid_move(self):
 		if len(self.bag.bag) == 100 - 7 * self.players:
-			return self.current_player.start == 'h8'
+			return self.word.start == 'h8'
 
-		for s in set_word_range(self.current_player):
-			if occupied_up_or_left(self.current_player.direction, s, self.board):
+		for square in self.word.range:
+			if occupied_up_or_left(square, self.word):
 				return True
-			elif occupied_down_or_right(self.current_player.direction, s, self.board):
+			elif occupied_down_or_right(square, self.word):
 				return True
 
 		return False

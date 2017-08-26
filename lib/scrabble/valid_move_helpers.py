@@ -34,9 +34,9 @@ def down_or_right(square, direction):
   else:
     return right_move(square)
 
-def occupied_up_or_left(direction, square, board):
-  return ord(board.board.get(up_or_left(square, direction), ['.'])[0]) in range(65, 91)
+def occupied_up_or_left(square, word):
+  return ord(word.board.get(up_or_left(square, word.direction), ['.'])[0]) in range(65, 91)
 
 
-def occupied_down_or_right(direction, square, board):
-  return ord(board.board.get(down_or_right(square, direction), ['.'])[0]) in range(65, 91)
+def occupied_down_or_right(square, word):
+  return ord(word.board.get(down_or_right(square, word.direction), ['.'])[0]) in range(65, 91)

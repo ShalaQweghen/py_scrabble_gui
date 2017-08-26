@@ -1,4 +1,5 @@
 import sys, re
+from word import Word
 
 class Player:
 	def __init__(self, inp=sys.stdin, outp=sys.stdout, name=None):
@@ -35,17 +36,17 @@ class Player:
 	def _replace_wild_tile(self):
 		self.output.write("\nWhat letter will you use the wild tile for? ")
 		self.wild_tile = self.input.readline()[:-1].upper()
-		self.word = re.sub('@', self.wild_tile, self.word)
+		self.word.word = re.sub('@', self.wild_tile, self.word.word)
 
 	def _letters_on_rack(self, word=None):
-		if '@' in (word or self.word):
+		if '@' in (word or self.word.word):
 			self._replace_wild_tile()
 
 		if self.wild_tile:
 			self.letters[self.letters.index('@')] = self.wild_tile
 
-		for l in (word or self.word):
-			if l not in self.letters or (word or self.word).count(l) > self.letters.count(l):
+		for l in (word or self.word.word):
+			if l not in self.letters or (word or self.word.word).count(l) > self.letters.count(l):
 				return False
 
 		if self.wild_tile:
@@ -61,10 +62,10 @@ class Player:
 		if self.wild_tile:
 			self.letters[self.letters.index('@')] = self.wild_tile
 
-		for l in self.word:
+		for l in self.word.word:
 			self.letters.remove(l)
 
-		self.draw_letters(bag, len(self.word))
+		self.draw_letters(bag, len(self.word.word))
 
 	def get_move(self, bag):
 		self.wild_tile = None
@@ -86,7 +87,7 @@ class Player:
 				self.get_move(bag)
 		else:
 			self.start, self.direction, self.word = player_input
-			self.word = self.word.upper()
+			self.word = Word(self, self.start, self.direction, self.word.upper())
 
 			if self.direction not in ['r', 'd']:
 				self.output.write('\n==================================================================\n')
