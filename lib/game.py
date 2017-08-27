@@ -1,4 +1,4 @@
-import random
+import random, time, sys
 
 from bag import Bag
 from board import Board
@@ -19,19 +19,30 @@ class Game:
 		self.word = None
 		self.players_list = []
 		self.names = config.get('names', {})
-		self.limit = config.get('limit')
-		self.streams = config.get('streams')
-		self.on_network = config.get('network')
+		self.limit = config.get('limit', False)
+		self.streams = config.get('streams', False)
+		self.on_network = config.get('network', False)
 		self.challenging = config.get('challenge', False)
 		self.saved = config.get('saved')
 		self.players = len(config['streams']) if self.on_network else 2
 		self.letter_points = helpers.set_letter_points()
 
-	def initialize_players(self):
+	def initialize_game(self):
 		for p in range(self.players):
-			player = Player(name=input("What is Player's name? "))
+			player = Player()
+
+			if self.streams:
+				player.output = self.streams[p]
+				player.input = self.streams[p]
+
+			player.output.write('\nWhat is Player {}\'s name? '.format(p + 1))
+			player.name = player.input.readline()[:-1].upper()
 			player.draw_letters(self.bag)
+
 			self.players_list.append(player)
+
+		if self.limit:
+			self.set_time_limit()
 
 		random.shuffle(self.players_list)
 
@@ -85,6 +96,9 @@ class Game:
 			self.handle_invalid_word()
 
 	def valid_move(self):
+		if self.limit and self.time_over():
+			self.end_game()
+
 		if len(self.bag.bag) == 100 - 7 * self.players:
 			return self.word.start == 'h8'
 
@@ -128,12 +142,6 @@ class Game:
 
 		self.current_player.update_score(self.points)
 
-	def enter_game_loop(self):
-		self.initialize_players()
-		while len(self.bag.bag) > 0 and self.passes != 3 * self.players:
-			self.initialize_turn()
-			self.play_turn()
-
 	def handle_invalid_word(self):
 		if not self.challenging:
 			self.play_turn()
@@ -141,3 +149,40 @@ class Game:
 			self.passes += 1
 			self.points = 0
 			self.word.reset()
+
+	def set_time_limit(self):
+		start_time = time.time()
+		self.end_time = start_time + int(self.limit) * 60
+
+	def time_over(self):
+		return time.time() >= self.end_time
+
+	def decide_winner(self):
+		winner = self.current_player
+
+		for p in self.players_list:
+			if p.score > winner.score:
+				winner = p
+
+		return winner
+
+	def end_game(self):
+		winner = self.decide_winner()
+
+		for p in ((self.on_network and self.players_list) or [self.current_player]):
+			p.output.write('\n==================================================================\n')
+			if self.time_over():
+				p.output.write('TIME IS UP!\n'.center(70))
+			else:
+				p.output.write('GAME IS OVER!\n'.center(70))
+			p.output.write('The winner is \033[1m{}\033[0m with \033[1m{}\033[0m points!'.format(winner.name, winner.score).center(70))
+			p.output.write('\n==================================================================\n')
+
+		sys.exit()
+
+	def enter_game_loop(self):
+		self.initialize_game()
+		while len(self.bag.bag) > 0 and self.passes != 3 * self.players:
+			self.initialize_turn()
+			self.play_turn()
+		self.end_game()

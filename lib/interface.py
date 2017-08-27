@@ -43,6 +43,6 @@ class Interface:
 		elif action == '5': return {'saved': True}
 		elif action == '9': self.give_main_options()
 		elif action == '0': sys.exit()
-		else: give_secondary_options
+		else: self.give_secondary_options
 
 Interface()
