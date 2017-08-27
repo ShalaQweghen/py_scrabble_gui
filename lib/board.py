@@ -75,6 +75,19 @@ class Board:
 				print('   {}'.format(lcd + b_line * 14 + ver * 3 + rcd))
 		print('     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o')
 
-	def place(self, letters, spots):
-		for l, s in zip(letters, spots):
+	def calculate_bonus(self, word_range):
+		bonus = {'word': {}, 'letter': {}}
+		for square in word_range:
+			if self.board[square] == '2w':
+				bonus['word'][square] = 2
+			elif self.board[square] == '3w':
+				bonus['word'][square] = 3
+			elif self.board[square] == '2l':
+				bonus['letter'][square] = 1
+			elif self.board[square] == '3l':
+				bonus['letter'][square] = 2
+		return bonus
+
+	def place(self, letters, word_range):
+		for l, s in zip(letters, word_range):
 			self.board[s] = l

@@ -48,7 +48,7 @@ class Player:
 				if not self._letter_on_rack(word, l):
 					return False
 			else:
-				if not self._letter_on_rack(word, l):
+				if not self.word.aob_list and not self._letter_on_rack(word, l):
 					return False
 
 		self.wild_tile = None
@@ -72,6 +72,9 @@ class Player:
 				self.letters.remove(l)
 
 		self.draw_letters(bag, len(self.word.word) - len(self.word.aob_list))
+
+	def update_score(self, points):
+		self.score += points
 
 	def get_move(self, bag, board):
 		self.wild_tile = None

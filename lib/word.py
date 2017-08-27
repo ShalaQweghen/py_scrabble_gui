@@ -7,6 +7,7 @@ class Word:
     self.range = self.set_range()
     self.aob_list = self.set_aob_list()
     self.extra_words = []
+    self.extra_spots = []
 
   def set_range(self):
     if self.direction == "r":
