@@ -67,14 +67,10 @@ class Game:
 				self.current_player.update_rack(self.bag)
 				self.passes = 0
 			else:
-				self.current_player.output.write('\n==================================================================\n')
-				self.current_player.output.write('Move was illegal...'.center(70))
-				self.current_player.output.write('\n==================================================================\n')
+				self.current_player.display_message('Move was illegal...')
 				self.play_turn()
 		else:
-			self.current_player.output.write('\n==================================================================\n')
-			self.current_player.output.write('Word is not in dictionary...'.center(70))
-			self.current_player.output.write('\n==================================================================\n')
+			self.current_player.display_message('Word is not in dictionary...')
 			self.play_turn()
 
 	def valid_move(self):
