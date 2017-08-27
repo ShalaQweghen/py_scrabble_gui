@@ -1,4 +1,4 @@
-import sys
+import sys, textwrap
 
 from game import Game
 
@@ -15,11 +15,16 @@ class Interface:
 
 		action = input('\nPick an action: ')
 
-		if action == '0': pass
+		if action 	== '0': self.print_read_me()
 		elif action == '1': self.start_local_game()
 		elif action == '2': pass
 		elif action == '9': sys.exit()
 		else: self.give_main_options()
+
+	def print_read_me(self):
+		readme = open('./lib/README.txt', 'r').read()
+		print(readme)
+		self.give_main_options()
 
 	def start_local_game(self):
 		options = self.give_secondary_options()

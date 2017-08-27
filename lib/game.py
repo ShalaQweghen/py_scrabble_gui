@@ -23,15 +23,15 @@ class Game:
 		self.on_network = config.get('network', False)
 		self.challenging = config.get('challenge', False)
 		self.saved = config.get('saved', False)
-		self.players = len(config['streams']) if self.on_network else None
+		self.players = len(config['streams']) if self.on_network else 0
 		self.letter_points = helpers.set_letter_points()
 
 	def initialize_game(self):
 		if self.saved:
 			helpers.load(self)
 		else:
-			if not self.players:
-				self.players = int(input('\nHow many players will there be? '))
+			while self.players not in [2, 3, 4]:
+				self.players = int(input('\nHow many players will there be (2, 3, or 4)? '))
 
 			for p in range(self.players):
 				player = Player()
