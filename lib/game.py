@@ -17,15 +17,15 @@ class Game:
 		self.points = 0
 		self.words = []
 		self.word = None
+		self.players_list = []
 		self.names = config.get('names', {})
 		self.limit = config.get('limit')
 		self.streams = config.get('streams')
 		self.on_network = config.get('network')
-		self.challenging = config.get('challenge')
+		self.challenging = config.get('challenge', False)
 		self.saved = config.get('saved')
 		self.players = len(config['streams']) if self.on_network else 2
-		self.players_list = []
-		self.letter_points = set_letter_points()
+		self.letter_points = helpers.set_letter_points()
 
 	def initialize_players(self):
 		for p in range(self.players):
@@ -74,11 +74,15 @@ class Game:
 				self.current_player.update_rack(self.bag)
 				self.passes = 0
 			else:
-				self.current_player.display_message('Move was illegal...')
-				self.play_turn()
+				if not self.valid_move():
+					self.current_player.display_message('Move was illegal...')
+					self.play_turn()
+				else:
+					self.current_player.display_message('{} is not in the dictionary...'.format(self.word.invalid_word))
+					self.handle_invalid_word()
 		else:
-			self.current_player.display_message('Word is not in dictionary...')
-			self.play_turn()
+			self.current_player.display_message('{} is not in dictionary...'.format(self.word.word))
+			self.handle_invalid_word()
 
 	def valid_move(self):
 		if len(self.bag.bag) == 100 - 7 * self.players:
@@ -130,16 +134,10 @@ class Game:
 			self.initialize_turn()
 			self.play_turn()
 
-
-
-
-
-
-
-
-
-
-
-
-g = Game()
-g.enter_game_loop()
+	def handle_invalid_word(self):
+		if not self.challenging:
+			self.play_turn()
+		else:
+			self.passes += 1
+			self.points = 0
+			self.word.reset()

@@ -1,5 +1,6 @@
-from game import Game
 import sys
+
+from game import Game
 
 class Interface:
 	def __init__(self):
@@ -22,7 +23,7 @@ class Interface:
 
 	def start_local_game(self):
 		options = self.give_secondary_options()
-		Game(options)
+		Game(options).enter_game_loop()
 
 	def give_secondary_options(self):
 		print('\n1 => Start a new game on normal mode')
@@ -43,3 +44,5 @@ class Interface:
 		elif action == '9': self.give_main_options()
 		elif action == '0': sys.exit()
 		else: give_secondary_options
+
+Interface()

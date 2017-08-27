@@ -32,6 +32,7 @@ def process_extra_words(word, dic):
         word.extra_spots.append((square, word.word[i]))
         check_list.append(True)
       else:
+        word.invalid_word = word.extra_words[-1]
         word.extra_words = []
         word.extra_spots = []
         check_list.append(False)

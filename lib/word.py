@@ -8,6 +8,7 @@ class Word:
     self.aob_list = self.set_aob_list()
     self.extra_words = []
     self.extra_spots = []
+    self.invalid_word = None
 
   def set_range(self):
     if self.direction == "r":
@@ -36,3 +37,8 @@ class Word:
       if self.board[spot] == self.word[i]:
         aob_list.append(self.word[i])
     return aob_list
+
+  def reset(self):
+    self.extra_words = []
+    self.extra_spots = []
+    self.word = None
