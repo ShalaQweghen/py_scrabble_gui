@@ -19,7 +19,7 @@ class Interface:
 		elif action == '1': self.start_local_game()
 		elif action == '2': pass
 		elif action == '9': sys.exit()
-		else: give_main_options
+		else: self.give_main_options()
 
 	def start_local_game(self):
 		options = self.give_secondary_options()
@@ -43,6 +43,6 @@ class Interface:
 		elif action == '5': return {'saved': True}
 		elif action == '9': self.give_main_options()
 		elif action == '0': sys.exit()
-		else: self.give_secondary_options
+		else: self.give_secondary_options()
 
 Interface()

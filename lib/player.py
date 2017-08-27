@@ -10,7 +10,7 @@ class Player:
 		self.letters = []
 		self.wild_tile = None
 		self.is_passing = False
-		self.is_rejected = False
+		self.is_saving = False
 
 	def _pick_from(self, bag):
 		if bag:
@@ -79,6 +79,7 @@ class Player:
 	def get_move(self, bag, board):
 		self.wild_tile = None
 		self.is_passing = False
+		self.is_saving = False
 
 		self.output.write('\nEnter your move (e.g. h8 r money): ')
 		player_input = self.input.readline()[:-1].lower().split()
@@ -88,7 +89,7 @@ class Player:
 				self._pass_letters(bag, board)
 				self.is_passing = True
 			elif player_input[0] == 'save':
-				pass
+				self.is_saving = True
 			else:
 				self.display_message('Make sure your input is correct (e.g. h8 r money)')
 				self.get_move(bag, board)

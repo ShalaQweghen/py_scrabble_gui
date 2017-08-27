@@ -18,33 +18,38 @@ class Game:
 		self.words = []
 		self.word = None
 		self.players_list = []
-		self.names = config.get('names', {})
 		self.limit = config.get('limit', False)
 		self.streams = config.get('streams', False)
 		self.on_network = config.get('network', False)
 		self.challenging = config.get('challenge', False)
-		self.saved = config.get('saved')
-		self.players = len(config['streams']) if self.on_network else 2
+		self.saved = config.get('saved', False)
+		self.players = len(config['streams']) if self.on_network else None
 		self.letter_points = helpers.set_letter_points()
 
 	def initialize_game(self):
-		for p in range(self.players):
-			player = Player()
+		if self.saved:
+			helpers.load(self)
+		else:
+			if not self.players:
+				self.players = int(input('\nHow many players will there be? '))
 
-			if self.streams:
-				player.output = self.streams[p]
-				player.input = self.streams[p]
+			for p in range(self.players):
+				player = Player()
 
-			player.output.write('\nWhat is Player {}\'s name? '.format(p + 1))
-			player.name = player.input.readline()[:-1].upper()
-			player.draw_letters(self.bag)
+				if self.streams:
+					player.output = self.streams[p]
+					player.input = self.streams[p]
 
-			self.players_list.append(player)
+				player.output.write('\nWhat is Player {}\'s name? '.format(p + 1))
+				player.name = player.input.readline()[:-1].upper()
+				player.draw_letters(self.bag)
 
-		if self.limit:
-			self.set_time_limit()
+				self.players_list.append(player)
 
-		random.shuffle(self.players_list)
+			if self.limit:
+				self.set_time_limit()
+
+			random.shuffle(self.players_list)
 
 	def initialize_turn(self):
 		if self.word:
@@ -73,6 +78,11 @@ class Game:
 
 	def play_turn(self):
 		self.current_player.get_move(self.bag, self.board)
+
+		while self.current_player.is_saving:
+			helpers.save(self)
+			self.current_player.get_move(self.bag, self.board)
+
 		self.word = self.current_player.word
 		self.word.board = self.board.board
 
@@ -184,5 +194,13 @@ class Game:
 		self.initialize_game()
 		while len(self.bag.bag) > 0 and self.passes != 3 * self.players:
 			self.initialize_turn()
-			self.play_turn()
+			try:
+				self.play_turn()
+			except KeyboardInterrupt:
+				self.current_player.output.write('\n\nAre you sure about cancelling the game (y/n) ? ')
+				answer = self.current_player.input.readline()[:-1].upper()[0]
+				if answer == 'Y':
+					sys.exit()
+				else:
+					self.turns -= 1
 		self.end_game()
