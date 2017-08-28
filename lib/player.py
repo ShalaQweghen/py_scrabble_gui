@@ -5,12 +5,62 @@ class Player:
 	def __init__(self, inp=sys.stdin, outp=sys.stdout, name=None):
 		self.input = inp
 		self.output = outp
-		self.name = name
+		self.name = None
 		self.score = 0
 		self.letters = []
 		self.wild_tile = None
 		self.is_passing = False
 		self.is_saving = False
+
+	def draw_letters(self, bag, amount=7):
+		for i in range(amount):
+			self.letters.append(self._pick_from(bag))
+
+	def update_rack(self, bag):
+		for l in self.word.word:
+			if l not in self.word.aob_list:
+				self.letters.remove(l)
+
+		self.draw_letters(bag, len(self.word.word) - len(self.word.aob_list))
+
+	def update_score(self, points):
+		self.score += points
+
+	def get_move(self, bag, board, dic):
+		self.wild_tile = None
+		self.is_passing = False
+		self.is_saving = False
+
+		self.output.write('\nEnter your move (e.g. h8 r money): ')
+		player_input = self.input.readline()[:-1].lower().split()
+
+		if len(player_input) < 3 or len(player_input) > 3:
+			if player_input[0] == 'pass':
+				self._pass_letters(bag, board, dic)
+				self.is_passing = True
+			elif player_input[0] == 'save':
+				self.is_saving = True
+			else:
+				self.display_message('Make sure your input is correct (e.g. h8 r money)')
+				self.get_move(bag, board, dic)
+		else:
+			start, direction, word = player_input
+			self.word = Word(start, direction, word.upper(), board, dic)
+
+			if direction not in ['r', 'd']:
+				self.display_message('Your direction should be either \'r\' for right or \'d\' for down...')
+				self.get_move(bag, board)
+			elif not self._valid_letters():
+				self.display_message('One or more letters are not on your rack...')
+				self.get_move(bag, board, dic)
+
+	def display_message(self, message):
+		self.output.write('\n==================================================================\n')
+		self.output.write(message.center(70))
+		self.output.write('\n==================================================================\n')
+
+	def __str__(self):
+		return '{} has got {} points.'.format(self.name, self.score).center(70)
 
 	def _pick_from(self, bag):
 		if bag:
@@ -29,7 +79,7 @@ class Player:
 			self.draw_letters(bag, len(passed_letters))
 		else:
 			self.display_message("One or more letters are not on your rack...")
-			self.get_move(bag, board)
+			self.get_move(bag, board, dic)
 
 	def _replace_wild_tile(self):
 		self.output.write("\nWhat letter will you use the wild tile for? ")
@@ -61,53 +111,3 @@ class Player:
 				self.wild_tile = None
 			return False
 		return True
-
-	def draw_letters(self, bag, amount=7):
-		for i in range(amount):
-			self.letters.append(self._pick_from(bag))
-
-	def update_rack(self, bag):
-		for l in self.word.word:
-			if l not in self.word.aob_list:
-				self.letters.remove(l)
-
-		self.draw_letters(bag, len(self.word.word) - len(self.word.aob_list))
-
-	def update_score(self, points):
-		self.score += points
-
-	def get_move(self, bag, board):
-		self.wild_tile = None
-		self.is_passing = False
-		self.is_saving = False
-
-		self.output.write('\nEnter your move (e.g. h8 r money): ')
-		player_input = self.input.readline()[:-1].lower().split()
-
-		if len(player_input) < 3 or len(player_input) > 3:
-			if player_input[0] == 'pass':
-				self._pass_letters(bag, board)
-				self.is_passing = True
-			elif player_input[0] == 'save':
-				self.is_saving = True
-			else:
-				self.display_message('Make sure your input is correct (e.g. h8 r money)')
-				self.get_move(bag, board)
-		else:
-			start, direction, word = player_input
-			self.word = Word(start, direction, word.upper(), board.board)
-
-			if direction not in ['r', 'd']:
-				self.display_message('Your direction should be either \'r\' for right or \'d\' for down...')
-				self.get_move(bag, board)
-			elif not self._valid_letters():
-				self.display_message('One or more letters are not on your rack...')
-				self.get_move(bag, board)
-
-	def display_message(self, message):
-		self.output.write('\n==================================================================\n')
-		self.output.write(message.center(70))
-		self.output.write('\n==================================================================\n')
-
-	def __str__(self):
-		return '{} has got {} points.'.format(self.name, self.score).center(70)

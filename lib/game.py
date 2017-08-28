@@ -4,7 +4,6 @@ from bag import Bag
 from board import Board
 from player import Player
 from dic import Dict
-from word import Word
 import scrabble.helpers as helpers
 
 class Game:
@@ -34,11 +33,10 @@ class Game:
 				self.players = int(input('\nHow many players will there be (2, 3, or 4)? '))
 
 			for p in range(self.players):
-				player = Player()
-
 				if self.streams:
-					player.output = self.streams[p]
-					player.input = self.streams[p]
+					player = Player(self.streams[p], self.streams[p])
+				else:
+					player = Player()
 
 				player.output.write('\nWhat is Player {}\'s name? '.format(p + 1))
 				player.name = player.input.readline()[:-1].upper()
@@ -77,19 +75,18 @@ class Game:
 		self.current_player.output.write("\t\t   \u2551 {} \u2551\n".format(' - '.join(self.current_player.letters)))
 
 	def play_turn(self):
-		self.current_player.get_move(self.bag, self.board)
+		self.current_player.get_move(self.bag, self.board, self.dict)
 
 		while self.current_player.is_saving:
 			helpers.save(self)
-			self.current_player.get_move(self.bag, self.board)
+			self.current_player.get_move(self.bag, self.board, self.dict)
 
 		self.word = self.current_player.word
-		self.word.board = self.board.board
 
 		if self.current_player.is_passing:
 			self.passes += 1
 		elif self.dict.valid_word(self.word.word):
-			if self.valid_move() and helpers.process_extra_words(self.word, self.dict):
+			if self.valid_move() and self.word.process_extra_words():
 				self.calculate_points()
 				self.board.place(self.word.word, self.word.range)
 				self.current_player.update_rack(self.bag)
@@ -115,7 +112,7 @@ class Game:
 		for square in self.word.range:
 			if self.word.aob_list:
 				return True
-			elif helpers.square_occupied(square, self.word):
+			elif self.board.square_occupied(square, self.word.direction):
 				return True
 
 		return False
