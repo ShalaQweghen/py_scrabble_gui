@@ -1,4 +1,4 @@
-import pickle, os, sys
+import pickle, os, sys, subprocess
 
 from player import Player
 
@@ -143,7 +143,12 @@ def load(game):
     print('\nThere are no save files. Starting a new game...')
     start_anew(game)
 
-  filename = input('\nWhat is the save filename? ')
+  file_list = subprocess.check_output('ls saves | grep obj', shell=True)
+
+  print('\nFiles in the saves folder:\n')
+  print(file_list[:-1].decode('utf-8'))
+
+  filename = input('\nWhat is the name of your file without .obj? ')
 
   if not os.path.exists('./saves/' + filename + '.obj'):
     print('\nNo such file. Starting a new game...')
