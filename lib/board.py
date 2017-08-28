@@ -3,7 +3,7 @@ class Board:
 		self._prepare_board()
 		self._place_bonus()
 
-	def display(self):
+	def display(self, output):
 		# Components of the board outline
 		t_line = u'\u2550\u2550\u2550\u2566'
 		m_line = u'\u2550\u2550\u2550\u256C'
@@ -15,36 +15,38 @@ class Board:
 
 		row_number = 15
 
-		print('\n     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o')
-		print('   {}'.format(lcu + t_line * 14 + ver * 3 + rcu))
+		output.write('     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o\n')
+		output.write('   {}\n'.format(lcu + t_line * 14 + ver * 3 + rcu))
 
 		for row in self.rows:
 			if row_number < 10:
-				print('{}  '.format(row_number), end='')
+				output.write('{}  '.format(row_number))
 			else:
-				print('{} '.format(row_number), end='')
+				output.write('{} '.format(row_number))
 
 			for spot in row:
 				if self.board[spot] == '3w':
-					print('{}\x1b[31m{} \x1b[00m'.format(hor, self.board[spot]), end='')
+					output.write('{}\x1b[31m{} \x1b[00m'.format(hor, self.board[spot]))
 				elif self.board[spot] == '2w':
-					print('{}\x1b[35m{} \x1b[00m'.format(hor, self.board[spot]), end='')
+					output.write('{}\x1b[35m{} \x1b[00m'.format(hor, self.board[spot]))
 				elif self.board[spot] == '3l':
-					print('{}\x1b[34m{} \x1b[00m'.format(hor, self.board[spot]), end='')
+					output.write('{}\x1b[34m{} \x1b[00m'.format(hor, self.board[spot]))
 				elif self.board[spot] == '2l':
-					print('{}\x1b[36m{} \x1b[00m'.format(hor, self.board[spot]), end='')
+					output.write('{}\x1b[36m{} \x1b[00m'.format(hor, self.board[spot]))
 				else:
-					print('{}\033[1m {} \033[0m'.format(hor, self.board[spot]), end='')
+					output.write('{}\033[1m {} \033[0m'.format(hor, self.board[spot]))
 
-			print('{} {}'.format(hor, row_number))
+			output.write('{} {}\n'.format(hor, row_number))
 
 			row_number -= 1
 
 			if row_number > 0:
-				print('   {}'.format(lcm + m_line * 14 + ver * 3 + rcm))
+				output.write('   {}\n'.format(lcm + m_line * 14 + ver * 3 + rcm))
 			else:
-				print('   {}'.format(lcd + b_line * 14 + ver * 3 + rcd))
-		print('     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o')
+				output.write('   {}\n'.format(lcd + b_line * 14 + ver * 3 + rcd))
+		output.write('     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o\n')
+
+		output.flush()
 
 	def calculate_bonus(self, word_range):
 		bonus = {'word': {}, 'letter': {}}

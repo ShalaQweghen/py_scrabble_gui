@@ -22,23 +22,23 @@ class Game:
 		self.on_network = config.get('network', False)
 		self.challenging = config.get('challenge', False)
 		self.saved = config.get('saved', False)
-		self.players = len(config['streams']) if self.on_network else 0
+		self.players = config.get('players')
 		self.letter_points = helpers.set_letter_points()
 
 	def initialize_game(self):
 		if self.saved:
 			helpers.load(self)
 		else:
-			while self.players not in [2, 3, 4]:
-				self.players = int(input('\nHow many players will there be (2, 3, or 4)? '))
-
 			for p in range(self.players):
 				if self.streams:
-					player = Player(self.streams[p], self.streams[p])
+					player = Player(self.streams[p][0], self.streams[p][1])
+					if p == len(self.streams) - 1:
+						self.streams = False
 				else:
 					player = Player()
 
-				player.output.write('\nWhat is Player {}\'s name? '.format(p + 1))
+				player.output.write('What is Player {}\'s name?: \n'.format(p + 1))
+				player.output.flush()
 				player.name = player.input.readline()[:-1].upper()
 				player.draw_letters(self.bag)
 
@@ -57,22 +57,33 @@ class Game:
 		self.current_player = self.players_list[self.turns % self.players]
 		self.turns += 1
 		self.word_list = []
-		self.board.display()
-		self.display_turn_info()
+		if self.on_network:
+			for p in self.players_list:
+				self.board.display(p.output)
+				self.display_turn_info(p.output)
+		else:
+			self.board.display(self.current_player.output)
+			self.display_turn_info(self.current_player.output)
+
+		self.display_rack()
 		self.words = []
 
-	def display_turn_info(self):
-		self.current_player.output.write(
+	def display_turn_info(self, output):
+		output.write(
 			"\n\033[1mPlayer:\033[0m {}\t\t\033[1m|\033[0m  \033[1mTotal Points:\033[0m {}\n".format(
 				self.current_player.name, self.current_player.score
 			)
 		)
-		self.current_player.output.write(
+		output.write(
 			"\033[1mLetters Left in Bag:\033[0m {}\t\033[1m|\033[0m  \033[1mWords Prev. Made:\033[0m {} for {} points\n\n".format(
 				len(self.bag.bag), self.words, self.points
 			)
 		)
-		self.current_player.output.write("\t\t   \u2551 {} \u2551\n".format(' - '.join(self.current_player.letters)))
+		output.flush()
+
+	def display_rack(self):
+		self.current_player.output.write("\t\t   \u2551 {} \u2551\n\n".format(' - '.join(self.current_player.letters)))
+		self.current_player.output.flush()
 
 	def play_turn(self):
 		self.current_player.get_move(self.bag, self.board, self.dict)
@@ -93,13 +104,13 @@ class Game:
 				self.passes = 0
 			else:
 				if not self.valid_move():
-					self.current_player.display_message('Move was illegal...')
+					self.current_player.display_message('Move was illegal...\n')
 					self.play_turn()
 				else:
-					self.current_player.display_message('{} is not in the dictionary...'.format(self.word.invalid_word))
+					self.current_player.display_message('{} is not in the dictionary...\n'.format(self.word.invalid_word))
 					self.handle_invalid_word()
 		else:
-			self.current_player.display_message('{} is not in dictionary...'.format(self.word.word))
+			self.current_player.display_message('{} is not in dictionary...\n'.format(self.word.word))
 			self.handle_invalid_word()
 
 	def valid_move(self):
@@ -177,13 +188,13 @@ class Game:
 		winner = self.decide_winner()
 
 		for p in ((self.on_network and self.players_list) or [self.current_player]):
-			p.output.write('\n==================================================================\n')
+			p.output.write('==================================================================\n')
 			if self.time_over():
 				p.output.write('TIME IS UP!\n'.center(70))
 			else:
 				p.output.write('GAME IS OVER!\n'.center(70))
 			p.output.write('The winner is \033[1m{}\033[0m with \033[1m{}\033[0m points!'.format(winner.name, winner.score).center(70))
-			p.output.write('\n==================================================================\n')
+			p.output.write('==================================================================\n')
 
 		sys.exit()
 
@@ -194,7 +205,7 @@ class Game:
 			try:
 				self.play_turn()
 			except KeyboardInterrupt:
-				self.current_player.output.write('\n\nAre you sure about cancelling the game (y/n) ? ')
+				self.current_player.output.write('Are you sure about cancelling the game (y/n) ?: \n')
 				answer = self.current_player.input.readline()[:-1].upper()[0]
 				if answer == 'Y':
 					sys.exit()

@@ -1,4 +1,4 @@
-import pickle, os, sys, subprocess
+import pickle, os, sys, subprocess, socket
 
 from player import Player
 

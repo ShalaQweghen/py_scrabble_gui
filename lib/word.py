@@ -44,9 +44,9 @@ class Word:
 
   def _set_range(self):
     if self.direction == "r":
-      return self.set_range_to_right()
+      return self._set_range_to_right()
     else:
-      return self.set_range_to_down()
+      return self._set_range_to_down()
 
   def _set_range_to_right(self):
     last = chr((ord(self.start[0]) + len(self.word)))

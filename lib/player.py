@@ -31,7 +31,8 @@ class Player:
 		self.is_passing = False
 		self.is_saving = False
 
-		self.output.write('\nEnter your move (e.g. h8 r money): ')
+		self.output.write('Enter your move (e.g. h8 r money): \n')
+		self.output.flush()
 		player_input = self.input.readline()[:-1].lower().split()
 
 		if len(player_input) < 3 or len(player_input) > 3:
@@ -41,23 +42,26 @@ class Player:
 			elif player_input[0] == 'save':
 				self.is_saving = True
 			else:
-				self.display_message('Make sure your input is correct (e.g. h8 r money)')
+				self.display_message('Make sure your input is correct (e.g. h8 r money)...\n')
 				self.get_move(bag, board, dic)
 		else:
 			start, direction, word = player_input
 			self.word = Word(start, direction, word.upper(), board, dic)
 
 			if direction not in ['r', 'd']:
-				self.display_message('Your direction should be either \'r\' for right or \'d\' for down...')
+				self.display_message('Your direction should be either \'r\' for right or \'d\' for down...\n')
 				self.get_move(bag, board)
 			elif not self._valid_letters():
-				self.display_message('One or more letters are not on your rack...')
+				self.display_message('One or more letters are not on your rack...\n')
 				self.get_move(bag, board, dic)
 
+		self.output.flush()
+
 	def display_message(self, message):
-		self.output.write('\n==================================================================\n')
+		self.output.write('==================================================================\n')
 		self.output.write(message.center(70))
-		self.output.write('\n==================================================================\n')
+		self.output.write('==================================================================\n')
+		self.output.flush()
 
 	def __str__(self):
 		return '{} has got {} points.'.format(self.name, self.score).center(70)
@@ -66,8 +70,9 @@ class Player:
 		if bag:
 			return bag.draw()
 
-	def _pass_letters(self, bag, board):
-		self.output.write('\nEnter the letter(s) you want to pass: ')
+	def _pass_letters(self, bag, board, dic):
+		self.output.write('Enter the letter(s) you want to pass: \n')
+		self.output.flush()
 		player_input = self.input.readline()[:-1].upper()
 		passed_letters = list(re.sub('[^A-Z@]', '', player_input))
 
@@ -78,11 +83,12 @@ class Player:
 			bag.put_back(passed_letters)
 			self.draw_letters(bag, len(passed_letters))
 		else:
-			self.display_message("One or more letters are not on your rack...")
+			self.display_message("One or more letters are not on your rack...\n")
 			self.get_move(bag, board, dic)
 
 	def _replace_wild_tile(self):
-		self.output.write("\nWhat letter will you use the wild tile for? ")
+		self.output.write("What letter will you use the wild tile for?: \n")
+		self.output.flush()
 		self.wild_tile = self.input.readline()[:-1].upper()
 		self.word.word = re.sub('@', self.wild_tile, self.word.word)
 
