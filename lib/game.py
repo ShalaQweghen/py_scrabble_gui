@@ -23,7 +23,7 @@ class Game:
 		self.on_network = config.get('network', False)
 		self.challenging = config.get('challenge', False)
 		self.saved = config.get('saved', False)
-		self.players = config.get('players')
+		self.players = int(config.get('players'))
 		self.letter_points = helpers.set_letter_points()
 
 	def initialize_game(self):
@@ -65,7 +65,7 @@ class Game:
 
 			for p in self.players_list:
 				if p is not self.current_player:
-					p.output.write("It's {}'s turn...\n\n".format(self.current_player.name))
+					p.output.write("\nIt's {}'s turn...\n\n".format(self.current_player.name))
 					p.output.flush()
 		else:
 			self.current_player = self.players_list[self.turns % self.players]
@@ -86,7 +86,7 @@ class Game:
 				len(self.bag.bag), self.words, self.points, self.current_player.name
 			)
 		)
-		p.output.write("\t\t   \u2551 {} \u2551\n\n".format(' - '.join(p.letters)))
+		p.output.write("\u2551 {} \u2551\n".format(' - '.join(p.letters)).center(70))
 		p.output.flush()
 
 	def play_turn(self):
@@ -149,6 +149,9 @@ class Game:
 			else:
 				word_points += self.letter_points[l]
 
+		if self.turns == 1:
+			word_points *= 2
+
 		if word_bonus:
 			for s in self.word.range:
 				self.points += word_bonus.get(s, 0) * word_points
@@ -195,12 +198,14 @@ class Game:
 		winner = self.decide_winner()
 
 		for p in ((self.on_network and self.players_list) or [self.current_player]):
-			p.output.write('\n==================================================================\n')
+			p.output.write('\n==================================================================\n\n')
 			if self.limit and self.time_over():
 				p.output.write('TIME IS UP!\n'.center(70))
 			else:
 				p.output.write('GAME IS OVER!\n'.center(70))
-			p.output.write('The winner is \033[1m{}\033[0m with \033[1m{}\033[0m points!'.format(winner.name, winner.score).center(70))
+
+			p.output.write('\n')
+			p.output.write('The winner is \033[1m{}\033[0m with \033[1m{}\033[0m points!\n'.format(winner.name, winner.score).center(85))
 			p.output.write('\n==================================================================\n')
 
 		sys.exit()
@@ -212,7 +217,7 @@ class Game:
 			try:
 				self.play_turn()
 			except KeyboardInterrupt:
-				answer = input('Are you sure about cancelling the game (y/n) ?: ').upper()[0]
+				answer = input('\nAre you sure about cancelling the game (y/n) ?: ').upper()[0]
 				if answer == 'Y':
 					sys.exit()
 				else:

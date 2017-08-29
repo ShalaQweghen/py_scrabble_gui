@@ -4,14 +4,15 @@ from game import Game
 
 class Interface:
 	def __init__(self):
-		print('COMMANDLINE SCRABBLE'.center(50))
+		print()
+		print('\033[1mCOMMANDLINE SCRABBLE\033[0m'.center(50))
 		self.give_main_options()
 
 	def give_main_options(self):
-		print('\n0 => README')
-		print('1 => Game options on this computer')
-		print('2 => Game options on the network')
-		print('9 => Exit')
+		print('\n\033[1m0\033[0m => README')
+		print('\033[1m1\033[0m => Game options on this computer')
+		print('\033[1m2\033[0m => Game options on the network')
+		print('\033[1m9\033[0m => Exit')
 
 		action = input('\nPick an action: ')
 
@@ -37,10 +38,10 @@ class Interface:
 
 	def start_network_game(self):
 		options = self.give_secondary_options()
-		options['players'] = int(input('\nHow many players will there be (2, 3, or 4)? '))
+		options['players'] = input('\nHow many players will there be (2, 3, or 4)? ')
 
-		while options['players'] not in [2, 3, 4]:
-			options['players'] = int(input('\n2, 3, or 4: '))
+		while options['players'] not in ['2', '3', '4']:
+			options['players'] = input('\n2, 3, or 4: ')
 
 		sock = socket.socket()
 		sock.setblocking(True)
@@ -54,7 +55,7 @@ class Interface:
 
 		options['streams'] = []
 
-		for i in range(options['players'] - 1):
+		for i in range(int(options['players']) - 1):
 			cli, addr = sock.accept()
 
 			c_input = cli.makefile('r')
@@ -68,13 +69,13 @@ class Interface:
 
 
 	def give_secondary_options(self):
-		print('\n1 => Start a new game on normal mode')
-		print('2 => Start a new game on challenge mode')
-		print('3 => Start a new game on normal mode with a time limit')
-		print('4 => Start a new game on challenge mode with a time limit')
-		print('5 => Continue a saved game')
-		print('9 => Go to previous menu')
-		print('0 => Exit')
+		print('\n\033[1m1\033[0m => Start a new game on normal mode')
+		print('\033[1m2\033[0m => Start a new game on challenge mode')
+		print('\033[1m3\033[0m => Start a new game on normal mode with a time limit')
+		print('\033[1m4\033[0m => Start a new game on challenge mode with a time limit')
+		print('\033[1m5\033[0m => Continue a saved game')
+		print('\033[1m9\033[0m => Go to previous menu')
+		print('\033[1m0\033[0m => Exit')
 
 		action = input('\nPick an action: ')
 

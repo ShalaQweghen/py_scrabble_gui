@@ -19,22 +19,16 @@ class Player:
 			self.letters.append(self._pick_from(bag))
 
 	def update_rack(self, bag):
+		aob = len(self.word.aob_list)
+
 		for l in self.word.word:
-			if self.word.word.count(l) == self.letters.count(l):
-				if l not in self.word.aob_list:
-					self.letters.remove(l)
-			elif self.word.word.count(l) > self.letters.count(l) and self.letters.count(l) > 0:
-				if self.word.word.count(l) > self.word.aob_list.count(l):
-					self.letters.remove(l)
-			else:
-				if l not in self.word.aob_list:
-					self.letters.remove(l)
+			self._remove_tile(l)
 
 		if len(self.letters) == 0:
 			self.full_bonus = True
 			self.update_score(60)
 
-		self.draw_letters(bag, len(self.word.word) - len(self.word.aob_list))
+		self.draw_letters(bag, len(self.word.word) - aob)
 
 	def update_score(self, points):
 		self.score += points
@@ -45,7 +39,7 @@ class Player:
 		self.is_saving = False
 		self.full_bonus = False
 
-		self.output.write('Enter your move (e.g. h8 r money): \n')
+		self.output.write('\nEnter your move (e.g. h8 r money): \n')
 		self.output.flush()
 
 		player_input = self.input.readline()[:-1].lower().split()
@@ -122,20 +116,29 @@ class Player:
 			self.letters[self.letters.index('@')] = self.wild_tile
 
 		for l in (word or self.word.word):
-			if self.word and self.word.aob_list and l not in self.word.aob_list:
+			try:
+				if l not in self.word.aob_list:
+					if not self._letter_on_rack(word, l):
+						return False
+			except AttributeError:
 				if not self._letter_on_rack(word, l):
-					return False
+						return False
 
 		self.wild_tile = None
 		return True
 
 	def _letter_on_rack(self, word, l):
-		print(self.word.aob_list)
-		print(l)
-		print(self.letters)
 		if l not in self.letters or (word or self.word.word).count(l) > self.letters.count(l):
 			if self.wild_tile:
 				self.letters[self.letters.index(self.wild_tile)] = '@'
 				self.wild_tile = None
 			return False
 		return True
+
+	def _remove_tile(self, l):
+		if l in self.word.aob_list:
+			print(1)
+			self.word.aob_list.remove(l)
+		elif l not in self.word.aob_list:
+			print(2)
+			self.letters.remove(l)

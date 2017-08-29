@@ -17,7 +17,7 @@ try:
   while line:
     print(line, end="")
     if line.strip().endswith(':'):
-      answer = input('=> ')
+      answer = input()
       s_output.write(answer + '\n')
       s_output.flush()
     line = s_input.readline()
