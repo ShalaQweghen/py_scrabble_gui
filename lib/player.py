@@ -103,7 +103,7 @@ class Player:
 			self.get_move(bag, board, dic)
 
 	def _replace_wild_tile(self):
-		self.output.write("What letter will you use the wild tile for?: \n")
+		self.output.write("\nWhat letter will you use the wild tile for?: \n")
 		self.output.flush()
 		self.wild_tile = self.input.readline()[:-1].upper()
 		self.word.word = re.sub('@', self.wild_tile, self.word.word)

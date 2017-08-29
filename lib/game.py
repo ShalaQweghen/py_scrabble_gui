@@ -50,11 +50,14 @@ class Game:
 
 			random.shuffle(self.players_list)
 			self.current_player = self.players_list[0]
+			self.prev_player = self.current_player.name
 
 	def initialize_turn(self):
 		if self.word:
 			self.words.append(self.word.word)
 			self.words.extend(self.word.extra_words)
+
+		self.prev_player = self.current_player.name
 
 		if self.on_network:
 			for p in self.players_list:
@@ -83,7 +86,7 @@ class Game:
 		)
 		p.output.write(
 			"\033[1mLetters Left in Bag:\033[0m {}\t\033[1m|\033[0m  \033[1mWords:\033[0m {} for {} pts by {}\n\n".format(
-				len(self.bag.bag), self.words, self.points, self.current_player.name
+				len(self.bag.bag), self.words, self.points, self.prev_player
 			)
 		)
 		p.output.write("\u2551 {} \u2551\n".format(' - '.join(p.letters)).center(70))
