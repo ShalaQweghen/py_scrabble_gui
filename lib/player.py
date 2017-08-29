@@ -12,6 +12,7 @@ class Player:
 		self.is_passing = False
 		self.is_saving = False
 		self.word = None
+		self.full_bonus = False
 
 	def draw_letters(self, bag, amount=7):
 		for i in range(amount):
@@ -19,8 +20,19 @@ class Player:
 
 	def update_rack(self, bag):
 		for l in self.word.word:
-			if l not in self.word.aob_list:
-				self.letters.remove(l)
+			if self.word.word.count(l) == self.letters.count(l):
+				if l not in self.word.aob_list:
+					self.letters.remove(l)
+			elif self.word.word.count(l) > self.letters.count(l) and self.letters.count(l) > 0:
+				if self.word.word.count(l) > self.word.aob_list.count(l):
+					self.letters.remove(l)
+			else:
+				if l not in self.word.aob_list:
+					self.letters.remove(l)
+
+		if len(self.letters) == 0:
+			self.full_bonus = True
+			self.update_score(60)
 
 		self.draw_letters(bag, len(self.word.word) - len(self.word.aob_list))
 
@@ -31,13 +43,17 @@ class Player:
 		self.wild_tile = None
 		self.is_passing = False
 		self.is_saving = False
+		self.full_bonus = False
 
 		self.output.write('Enter your move (e.g. h8 r money): \n')
 		self.output.flush()
 
 		player_input = self.input.readline()[:-1].lower().split()
 
-		if len(player_input) < 3 or len(player_input) > 3:
+		if len(player_input) == 0:
+			self.display_message('Void input...')
+			self.get_move(bag, board, dic)
+		elif len(player_input) < 3 or len(player_input) > 3:
 			if player_input[0] == 'pass':
 				self._pass_letters(bag, board, dic)
 				self.is_passing = True
@@ -106,17 +122,17 @@ class Player:
 			self.letters[self.letters.index('@')] = self.wild_tile
 
 		for l in (word or self.word.word):
-			if self.word and self.word.aob_list and l not in self.word.aob_list and l not in self.letters:
+			if self.word and self.word.aob_list and l not in self.word.aob_list:
 				if not self._letter_on_rack(word, l):
-					return False
-			else:
-				if not self._letter_on_rack(word, l) and not self.word.aob_list:
 					return False
 
 		self.wild_tile = None
 		return True
 
 	def _letter_on_rack(self, word, l):
+		print(self.word.aob_list)
+		print(l)
+		print(self.letters)
 		if l not in self.letters or (word or self.word.word).count(l) > self.letters.count(l):
 			if self.wild_tile:
 				self.letters[self.letters.index(self.wild_tile)] = '@'

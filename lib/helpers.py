@@ -29,6 +29,7 @@ def save(game):
 
   while os.path.exists('./saves/' + filename + '.obj'):
     game.current_player.output.write('\n' + filename +  ' already exists.\n')
+    game.current_player.output.flush()
     filename = ask_filename(game)
 
   players_list = []
@@ -89,7 +90,8 @@ def load(game):
     game.players_list.append(player)
 
 def ask_filename(game):
-  game.current_player.output.write('\nGive a name to the save file: ')
+  game.current_player.output.write('\nGive a name to the save file: \n')
+  game.current_player.output.flush()
   filename = game.current_player.input.readline()[:-1]
   return filename
 

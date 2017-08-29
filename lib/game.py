@@ -60,7 +60,13 @@ class Game:
 			for p in self.players_list:
 				self.board.display(p.output)
 				self.display_turn_info(p)
+
 			self.current_player = self.players_list[self.turns % self.players]
+
+			for p in self.players_list:
+				if p is not self.current_player:
+					p.output.write("It's {}'s turn...\n\n".format(self.current_player.name))
+					p.output.flush()
 		else:
 			self.current_player = self.players_list[self.turns % self.players]
 			self.board.display(self.current_player.output)
@@ -100,15 +106,18 @@ class Game:
 				self.board.place(self.word.word, self.word.range)
 				self.current_player.update_rack(self.bag)
 				self.passes = 0
+
+				if self.current_player.full_bonus:
+					self.points += 60
 			else:
 				if not self.valid_move():
-					self.current_player.display_message('Move was illegal...\n')
+					self.current_player.display_message('Move was illegal...')
 					self.play_turn()
 				else:
-					self.current_player.display_message('{} is not in the dictionary...\n'.format(self.word.invalid_word))
+					self.current_player.display_message('{} is not in the dictionary...'.format(self.word.invalid_word))
 					self.handle_invalid_word()
 		else:
-			self.current_player.display_message('{} is not in dictionary...\n'.format(self.word.word))
+			self.current_player.display_message('{} is not in dictionary...'.format(self.word.word))
 			self.handle_invalid_word()
 
 	def valid_move(self):
@@ -187,7 +196,7 @@ class Game:
 
 		for p in ((self.on_network and self.players_list) or [self.current_player]):
 			p.output.write('\n==================================================================\n')
-			if self.time_over():
+			if self.limit and self.time_over():
 				p.output.write('TIME IS UP!\n'.center(70))
 			else:
 				p.output.write('GAME IS OVER!\n'.center(70))
