@@ -40,4 +40,12 @@
   time, the game will be over and the player with the most points will win. If
   the time ends while making a word, the word will not count.
 
+* Multiplayer game over a network connection => When picked, a server will fire
+  up at port 12345 on your localhost. The player will be prompted about the
+  number of the players that will play the game. When another computers (as
+  many as specified by the player) on the network run 'python3 join_game.py
+  your_ip_address', a game will start. The connecting computers don't need to
+  have the whole game script. If a game doesn't start, the firewall might be
+  blocking incoming requests. Make sure to make the necessary adjustments.
+
 ================================================================================
