@@ -44,6 +44,7 @@ class Board:
 				output.write('   {}\n'.format(lcm + m_line * 14 + ver * 3 + rcm))
 			else:
 				output.write('   {}\n'.format(lcd + b_line * 14 + ver * 3 + rcd))
+
 		output.write('     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o\n')
 
 		output.flush()

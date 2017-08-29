@@ -50,19 +50,20 @@ class Interface:
 		sock.bind((host, port))
 
 		sock.listen()
-		print('Server fired up on ', host, ':', str(port))
+		print('\nServer fired up on {}:{}... Waiting for opponents...\n'.format(host, port))
 
 		options['streams'] = []
 
 		for i in range(options['players'] - 1):
 			cli, addr = sock.accept()
 
-			stdin = cli.makefile('r')
-			stdout = cli.makefile('w')
+			c_input = cli.makefile('r')
+			c_output = cli.makefile('w')
 
-			options['streams'].append((stdin, stdout))
+			options['streams'].append((c_input, c_output))
 
 		options['network'] = True
+
 		Game(options).enter_game_loop()
 
 
