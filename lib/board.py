@@ -15,7 +15,7 @@ class Board:
 
 		row_number = 15
 
-		output.write('     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o\n')
+		output.write('\n     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o\n')
 		output.write('   {}\n'.format(lcu + t_line * 14 + ver * 3 + rcu))
 
 		for row in self.rows:

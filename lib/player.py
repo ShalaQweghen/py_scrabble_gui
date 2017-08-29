@@ -137,8 +137,6 @@ class Player:
 
 	def _remove_tile(self, l):
 		if l in self.word.aob_list:
-			print(1)
 			self.word.aob_list.remove(l)
 		elif l not in self.word.aob_list:
-			print(2)
 			self.letters.remove(l)

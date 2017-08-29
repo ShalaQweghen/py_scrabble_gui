@@ -1,3 +1,5 @@
+import re
+
 class Word:
   def __init__(self, start, direction, word, board, dic):
     self.start = start
@@ -44,9 +46,15 @@ class Word:
 
   def _set_range(self):
     if self.direction == "r":
-      return self._set_range_to_right()
+      squares = self._set_range_to_right()
     else:
-      return self._set_range_to_down()
+      squares = self._set_range_to_down()
+
+    for s in squares:
+      if not re.fullmatch('[a-o]1[0-5]|[a-o][1-9]', s):
+        return False
+
+    return squares
 
   def _set_range_to_right(self):
     last = chr((ord(self.start[0]) + len(self.word)))
@@ -65,9 +73,10 @@ class Word:
 
   def _set_aob_list(self):
     aob_list = []
-    for i, spot in enumerate(self.range):
-      if self.board.board[spot] == self.word[i]:
-        aob_list.append(self.word[i])
+    if self.range:
+      for i, spot in enumerate(self.range):
+        if self.board.board[spot] == self.word[i]:
+          aob_list.append(self.word[i])
     return aob_list
 
   def _set_up_or_left_extra_word(self, square, extra_word):
@@ -84,4 +93,3 @@ class Word:
     self._set_up_or_left_extra_word(square, extra_word)
     self._set_down_or_right_extra_word(square, extra_word)
     return "".join(extra_word)
-

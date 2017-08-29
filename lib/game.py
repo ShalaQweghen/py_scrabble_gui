@@ -38,7 +38,7 @@ class Game:
 				else:
 					player = Player()
 
-				player.output.write('What is Player {}\'s name?: \n'.format(p + 1))
+				player.output.write('\nWhat is Player {}\'s name?: \n'.format(p + 1))
 				player.output.flush()
 				player.name = player.input.readline()[:-1].upper()
 				player.draw_letters(self.bag)
@@ -121,6 +121,9 @@ class Game:
 			self.handle_invalid_word()
 
 	def valid_move(self):
+		if not self.word.range:
+			return False
+
 		if self.limit and self.time_over():
 			self.end_game()
 
