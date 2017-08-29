@@ -214,15 +214,23 @@ class Game:
 		sys.exit()
 
 	def enter_game_loop(self):
-		self.initialize_game()
-		while len(self.bag.bag) > 0 and self.passes != 3 * self.players:
-			self.initialize_turn()
-			try:
-				self.play_turn()
-			except KeyboardInterrupt:
-				answer = input('\nAre you sure about cancelling the game (y/n) ?: ').upper()[0]
-				if answer == 'Y':
-					sys.exit()
-				else:
-					self.turns -= 1
-		self.end_game()
+		try:
+			self.initialize_game()
+			while len(self.bag.bag) > 0 and self.passes != 3 * self.players:
+				try:
+					self.initialize_turn()
+					self.play_turn()
+				except KeyboardInterrupt:
+					answer = input('\nAre you sure about cancelling the game (y/n) ?: ').upper()[0]
+					if answer == 'Y':
+						sys.exit()
+					else:
+						self.turns -= 1
+			self.end_game()
+		except BrokenPipeError:
+				for p in self.players_list:
+					try:
+						p.output.write('\nA player has quit the game. The game is cancelled.\n\n')
+						p.output.flush()
+					except:
+						continue
