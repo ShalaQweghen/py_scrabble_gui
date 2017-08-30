@@ -29,16 +29,16 @@ class Interface:
 
 	def start_local_game(self):
 		options = self.give_secondary_options()
-		options['players'] = int(input('\nHow many players will there be (2, 3, or 4)? '))
+		options['players'] = input('\nHow many players will there be (2, 3, or 4)? ').strip()
 
-		while options['players'] not in [2, 3, 4]:
-			options['players'] = int(input('\n2, 3, or 4: '))
+		while options['players'] not in ['2', '3', '4']:
+			options['players'] = input('\n2, 3, or 4: ')
 
 		Game(options).enter_game_loop()
 
 	def start_network_game(self):
 		options = self.give_secondary_options()
-		options['players'] = input('\nHow many players will there be (2, 3, or 4)? ')
+		options['players'] = input('\nHow many players will there be (2, 3, or 4)? ').strip()
 
 		while options['players'] not in ['2', '3', '4']:
 			options['players'] = input('\n2, 3, or 4: ')

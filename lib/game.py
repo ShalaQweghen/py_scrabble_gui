@@ -103,11 +103,14 @@ class Game:
 
 		if self.current_player.is_passing:
 			self.passes += 1
+			self.word = None
+			self.words = []
+			self.points = 0
 		elif self.move_acceptable() and self.word.valid():
-			self.points = self.word.points
+			self.points = self.word.calculate_points()
 
 			if self.turns == 1:
-				self.points += self.word.points
+				self.points *= 2
 
 			self.board.place(self.word.word, self.word.range)
 			self.current_player.update_rack(self.bag)
@@ -139,8 +142,13 @@ class Game:
 			self.word.reset()
 
 	def set_time_limit(self):
-		start_time = time.time()
-		self.end_time = start_time + int(self.limit) * 60
+		try:
+			start_time = time.time()
+			self.end_time = start_time + int(self.limit) * 60
+		except ValueError:
+			print('\nTime limit should be a whole number (1, 2, etc)...')
+			self.limit = input('Please enter the time limit in minutes: ')
+			self.set_time_limit()
 
 	def time_over(self):
 		return time.time() >= self.end_time
@@ -178,8 +186,8 @@ class Game:
 					self.initialize_turn()
 					self.play_turn()
 				except KeyboardInterrupt:
-					answer = input('\nAre you sure about cancelling the game (y/n) ?: ').upper()[0]
-					if answer == 'Y':
+					answer = input('\nAre you sure about cancelling the game (y/n) ?: ').upper().strip()
+					if answer.startswith('Y'):
 						sys.exit()
 					else:
 						self.turns -= 1
