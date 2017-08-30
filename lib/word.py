@@ -12,6 +12,7 @@ class Word:
     self.extra_words = []
     self.extra_spots = []
     self.invalid_word = None
+    self.valid = self._valid_move() and self.dict.valid_word(self.word) and self.process_extra_words()
 
   def process_extra_words(self):
     check_list = []
@@ -43,6 +44,18 @@ class Word:
     self.extra_words = []
     self.extra_spots = []
     self.word = None
+
+  def _valid_move(self):
+    if not self.range:
+      return False
+
+    for square in self.range:
+      if self.aob_list:
+        return True
+      elif self.board.square_occupied(square, self.direction):
+        return True
+
+    return False
 
   def _set_range(self):
     if self.direction == "r":
