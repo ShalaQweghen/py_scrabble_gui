@@ -13,6 +13,7 @@ class Word:
     self.range = self._set_range()
     self.aob_list = self._set_aob_list()
     self.letter_points = self._set_letter_points()
+    self.valid = False
 
   def process_extra_words(self):
     check_list = []
@@ -86,7 +87,6 @@ class Word:
 
     for square in self.range:
       if self.aob_list:
-        print(square, 2)
         return True
       elif self.board.square_occupied(square, self.direction):
         return True
@@ -97,21 +97,26 @@ class Word:
     return False
 
   def valid(self):
-    if not self.valid_move():
-      self.error_message = 'Move was illegal...'
-      return False
+    if self.valid:
+      return True
+    else:
+      if not self.valid_move():
+        self.error_message = 'Move was illegal...'
+        return False
 
-    if not self.dict.valid_word(self.word):
-      self.error_message = '{} is not in dictionary...'.format(self.word)
-      self.invalid_word = True
-      return False
+      if not self.dict.valid_word(self.word):
+        self.error_message = '{} is not in dictionary...'.format(self.word)
+        self.invalid_word = True
+        return False
 
-    if not self.process_extra_words():
-      self.error_message = '{} is not in the dictionary...'.format(self.invalid_word)
-      self.invalid_word = True
-      return False
+      if not self.process_extra_words():
+        self.error_message = '{} is not in the dictionary...'.format(self.invalid_word)
+        self.invalid_word = True
+        return False
 
-    return True
+      self.valid = True
+
+      return True
 
   def _set_range(self):
     if self.direction == "r":

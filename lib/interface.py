@@ -10,15 +10,17 @@ class Interface:
 
 	def give_main_options(self):
 		print('\n\033[1m0\033[0m => README')
-		print('\033[1m1\033[0m => Game options on this computer')
-		print('\033[1m2\033[0m => Game options on the network')
+		print('\033[1m1\033[0m => Game against computer')
+		print('\033[1m2\033[0m => Game options on this computer')
+		print('\033[1m3\033[0m => Game options on the network')
 		print('\033[1m9\033[0m => Exit')
 
 		action = input('\nPick an action: ')
 
 		if action 	== '0': self.print_read_me()
-		elif action == '1': self.start_local_game()
-		elif action == '2': self.start_network_game()
+		elif action == '1': self.start_against_comp()
+		elif action == '2': self.start_local_game()
+		elif action == '3': self.start_network_game()
 		elif action == '9': sys.exit()
 		else: self.give_main_options()
 
@@ -26,6 +28,9 @@ class Interface:
 		readme = open('./lib/README.txt', 'r').read()
 		print(readme)
 		self.give_main_options()
+
+	def start_against_comp(self):
+		Game({'comp': True}).enter_game_loop()
 
 	def start_local_game(self):
 		options = self.give_secondary_options()

@@ -6,6 +6,7 @@ from bag import Bag
 from board import Board
 from player import Player
 from dic import Dict
+from comp import AIOpponent
 
 class Game:
 	def __init__(self, config={}):
@@ -17,18 +18,31 @@ class Game:
 		self.points = 0
 		self.words = []
 		self.word = None
+		self.human = None
 		self.players_list = []
 		self.limit = config.get('limit', False)
 		self.streams = config.get('streams', False)
 		self.on_network = config.get('network', False)
 		self.challenging = config.get('challenge', False)
 		self.saved = config.get('saved', False)
-		self.players = int(config.get('players'))
+		self.players = int(config.get('players', 2))
+		self.comp = config.get('comp', False)
 
 	def initialize_game(self):
 		if self.saved:
 			helpers.load(self)
 			self.current_player = self.players_list[self.turns % self.players]
+		elif self.comp:
+			self.human = Player()
+			self.players_list.extend([AIOpponent(), self.human])
+			self.players_list[-1].name = input('\nWhat is your name?: ').upper()
+
+			for p in self.players_list:
+				p.draw_letters(self.bag)
+
+			random.shuffle(self.players_list)
+			self.current_player = self.players_list[0]
+			self.prev_player = self.current_player.name
 		else:
 			for p in range(self.players):
 				if self.streams:
@@ -72,8 +86,14 @@ class Game:
 					p.output.flush()
 		else:
 			self.current_player = self.players_list[self.turns % self.players]
-			self.board.display(self.current_player.output)
-			self.display_turn_info(self.current_player)
+
+			if self.current_player is self.human:
+				self.board.display(self.current_player.output)
+				self.display_turn_info(self.current_player)
+			elif self.comp:
+				self.board.display(self.human.output)
+				self.display_turn_info(self.human)
+				print('\nIt\'s Computer\'s turn...\n')
 
 		self.turns += 1
 		self.words = []

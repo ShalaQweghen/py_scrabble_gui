@@ -26,7 +26,6 @@ class Player:
 
 		if len(self.letters) == 0:
 			self.full_bonus = True
-			self.update_score(60)
 
 		self.draw_letters(bag, len(self.word.word) - aob)
 
