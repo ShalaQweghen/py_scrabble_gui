@@ -17,7 +17,10 @@ class Bag:
 
 	def draw(self):
 		random.shuffle(self.bag)
-		return self.bag.pop()
+		try:
+			return self.bag.pop()
+		except IndexError:
+			return '$'
 
 	def put_back(self, letters):
 		self.bag.extend(letters)

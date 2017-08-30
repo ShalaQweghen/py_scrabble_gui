@@ -96,7 +96,7 @@ class Word:
 
     return False
 
-  def valid(self):
+  def validate(self):
     if self.valid:
       return True
     else:

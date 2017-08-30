@@ -18,6 +18,8 @@ class Player:
 		for i in range(amount):
 			self.letters.append(self._pick_from(bag))
 
+		self.letters = list(re.sub('[^A-Z@]', '', ''.join(self.letters)))
+
 	def update_rack(self, bag):
 		aob = len(self.word.aob_list)
 
@@ -27,7 +29,8 @@ class Player:
 		if len(self.letters) == 0:
 			self.full_bonus = True
 
-		self.draw_letters(bag, len(self.word.word) - aob)
+		if len(bag.bag) > 0:
+			self.draw_letters(bag, len(self.word.word) - aob)
 
 	def update_score(self, points):
 		self.score += points

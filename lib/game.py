@@ -35,6 +35,7 @@ class Game:
 		elif self.comp:
 			self.human = Player()
 			self.players_list.extend([AIOpponent(), self.human])
+			self.players_list[0].name = 'COMP'
 			self.players_list[-1].name = input('\nWhat is your name?: ').upper()
 
 			for p in self.players_list:
@@ -82,7 +83,7 @@ class Game:
 
 			for p in self.players_list:
 				if p is not self.current_player:
-					p.output.write("\nIt's {}'s turn...\n\n".format(self.current_player.name))
+					p.output.write("\nIt's {}'s turn... {}\n\n".format(self.current_player.name, self.current_player))
 					p.output.flush()
 		else:
 			self.current_player = self.players_list[self.turns % self.players]
@@ -93,7 +94,7 @@ class Game:
 			elif self.comp:
 				self.board.display(self.human.output)
 				self.display_turn_info(self.human)
-				print('\nIt\'s Computer\'s turn...\n')
+				print('\nIt\'s Computer\'s turn... {}\n'.format(self.current_player))
 
 		self.turns += 1
 		self.words = []
@@ -126,7 +127,7 @@ class Game:
 			self.word = None
 			self.words = []
 			self.points = 0
-		elif self.move_acceptable() and self.word.valid():
+		elif self.move_acceptable() and self.word.validate():
 			self.points = self.word.calculate_points()
 
 			if self.turns == 1:
@@ -146,6 +147,13 @@ class Game:
 					self.handle_invalid_word()
 				else:
 					self.play_turn()
+
+	def racks_not_empty(self):
+		for p in self.players_list:
+			if len(p.letters) == 0:
+				return False
+
+		return True
 
 	def move_acceptable(self):
 		if self.limit and self.time_over():
@@ -201,7 +209,7 @@ class Game:
 	def enter_game_loop(self):
 		try:
 			self.initialize_game()
-			while len(self.bag.bag) > 0 and self.passes != 3 * self.players:
+			while self.racks_not_empty() and self.passes != 3 * self.players:
 				try:
 					self.initialize_turn()
 					self.play_turn()
