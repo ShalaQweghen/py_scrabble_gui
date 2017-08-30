@@ -1,4 +1,4 @@
-import pickle, os, sys, subprocess
+import pickle, os, sys, subprocess, datetime, requests
 
 from player import Player
 
@@ -65,7 +65,8 @@ def load(game):
   game.players = data['players']
 
   for p in data['players_info']:
-    player = Player(name=p[0])
+    player = Player()
+    player.name = p[0]
     player.score = p[1]
     player.letters = p[2]
     game.players_list.append(player)
@@ -80,3 +81,16 @@ def start_anew(game):
   os.system('sleep 1')
   game.saved = False
   game.enter_game_loop()
+
+def get_meaning(words):
+  file = open('words.txt', 'a+')
+  file.write('\n=== {} ===\n'.format(datetime.datetime.now()))
+
+  for word in words:
+    file.write('\n#' + word.upper() + '#\n')
+    r = requests.get(url='http://api.pearson.com/v2/dictionaries/ldoce5/entries?headword=' + word).json()
+
+    for result in r['results']:
+      file.write('\n\t{} = {}\n'.format(result['headword'], result['senses'][0]['definition'][0]))
+      if result["senses"][0].get("examples", None):
+        file.write('\t\tEXP: {}\n'.format(result['senses'][0]['examples'][0]['text']))

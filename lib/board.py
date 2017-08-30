@@ -74,6 +74,14 @@ class Board:
 					if self.occupied(s, 'd', self.up_or_left):
 						return False
 
+			if i == len(word_range) - 1:
+				if direction == 'd':
+					if self.occupied(s, 'r', self.down_or_right):
+						return False
+				else:
+					if self.occupied(s, 'd', self.down_or_right):
+						return False
+
 			if self.board[s] != word[i] and re.fullmatch('[A-Z]', self.board[s]):
 				return False
 

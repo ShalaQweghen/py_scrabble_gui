@@ -88,7 +88,7 @@ class Game:
 		else:
 			self.current_player = self.players_list[self.turns % self.players]
 
-			if self.current_player is self.human:
+			if self.current_player is self.human or not self.comp:
 				self.board.display(self.current_player.output)
 				self.display_turn_info(self.current_player)
 			elif self.comp:
@@ -136,7 +136,7 @@ class Game:
 			self.board.place(self.word.word, self.word.range)
 			self.current_player.update_rack(self.bag)
 
-			if self.current_player.full_bonus:
+			if self.current_player.full_bonus and len(self.bag.bag) > 0:
 				self.points += 60
 
 			self.current_player.update_score(self.points)
@@ -191,6 +191,8 @@ class Game:
 		return winner
 
 	def end_game(self):
+		self.remove_points()
+
 		winner = self.decide_winner()
 
 		for p in ((self.on_network and self.players_list) or [self.current_player]):
@@ -205,6 +207,13 @@ class Game:
 			p.output.write('\n==================================================================\n')
 
 		sys.exit()
+
+	def remove_points(self):
+		for p in self.players_list:
+			if p.letters:
+				for l in p.letters:
+					p.update_score(-(self.word.letter_points[l]))
+					p.letters.remove(l)
 
 	def enter_game_loop(self):
 		try:

@@ -28,7 +28,7 @@ class AIOpponent(Player):
 
     if len(words) == 0:
       self.is_passing = True
-      self._pass_letters(bag, board, dic)
+      self._pass_letters(bag)
     else:
       self.word = words[0]
 
