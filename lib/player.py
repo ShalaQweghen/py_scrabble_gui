@@ -122,7 +122,7 @@ class Player:
 						return False
 			except AttributeError:
 				if not self._letter_on_rack(word, l):
-						return False
+					return False
 
 		self.wild_tile = None
 		return True
@@ -132,7 +132,9 @@ class Player:
 			if self.wild_tile:
 				self.letters[self.letters.index(self.wild_tile)] = '@'
 				self.wild_tile = None
+
 			return False
+
 		return True
 
 	def _remove_tile(self, l):

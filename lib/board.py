@@ -1,3 +1,5 @@
+import re
+
 class Board:
 	def __init__(self):
 		self._prepare_board()
@@ -61,6 +63,21 @@ class Board:
 			elif self.board[square] == '3l':
 				bonus['letter'][square] = 2
 		return bonus
+
+	def valid_range(self, word_range, word, direction):
+		for i, s in enumerate(word_range):
+			if i == 0:
+				if direction == 'd':
+					if self.occupied(s, 'r', self.up_or_left):
+						return False
+				else:
+					if self.occupied(s, 'd', self.up_or_left):
+						return False
+
+			if self.board[s] != word[i] and re.fullmatch('[A-Z]', self.board[s]):
+				return False
+
+		return True
 
 	def place(self, letters, word_range):
 		for l, s in zip(letters, word_range):

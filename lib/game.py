@@ -24,11 +24,11 @@ class Game:
 		self.challenging = config.get('challenge', False)
 		self.saved = config.get('saved', False)
 		self.players = int(config.get('players'))
-		self.letter_points = helpers.set_letter_points()
 
 	def initialize_game(self):
 		if self.saved:
 			helpers.load(self)
+			self.current_player = self.players_list[self.turns % self.players]
 		else:
 			for p in range(self.players):
 				if self.streams:
@@ -103,78 +103,32 @@ class Game:
 
 		if self.current_player.is_passing:
 			self.passes += 1
-		elif self.dict.valid_word(self.word.word):
-			if self.valid_move() and self.word.process_extra_words():
-				self.calculate_points()
-				self.board.place(self.word.word, self.word.range)
-				self.current_player.update_rack(self.bag)
-				self.passes = 0
+		elif self.move_acceptable() and self.word.valid():
+			self.points = self.word.points
 
-				if self.current_player.full_bonus:
-					self.points += 60
-			else:
-				if not self.valid_move():
-					self.current_player.display_message('Move was illegal...')
-					self.play_turn()
-				else:
-					self.current_player.display_message('{} is not in the dictionary...'.format(self.word.invalid_word))
-					self.handle_invalid_word()
+			if self.turns == 1:
+				self.points += self.word.points
+
+			self.board.place(self.word.word, self.word.range)
+			self.current_player.update_rack(self.bag)
+
+			if self.current_player.full_bonus:
+				self.points += 60
+
+			self.current_player.update_score(self.points)
+			self.passes = 0
 		else:
-			self.current_player.display_message('{} is not in dictionary...'.format(self.word.word))
-			self.handle_invalid_word()
+				self.current_player.display_message(self.word.error_message)
+				if self.word.invalid_word:
+					self.handle_invalid_word()
+				else:
+					self.play_turn()
 
-	def valid_move(self):
-		if not self.word.range:
-			return False
-
+	def move_acceptable(self):
 		if self.limit and self.time_over():
 			self.end_game()
 
-		if len(self.bag.bag) == 100 - 7 * self.players:
-			return self.word.start == 'h8'
-
-		for square in self.word.range:
-			if self.word.aob_list:
-				return True
-			elif self.board.square_occupied(square, self.word.direction):
-				return True
-
-		return False
-
-	def calculate_points(self):
-		bonus = self.board.calculate_bonus(self.word.range)
-		word_bonus = bonus.get('word', None)
-		letter_bonus = bonus.get('letter', None)
-
-		word_points = 0
-		self.points = 0
-
-		for l, s in zip(self.word.word, self.word.range):
-			if letter_bonus:
-				word_points += (letter_bonus.get(s, 0) + 1) * self.letter_points[l]
-			else:
-				word_points += self.letter_points[l]
-
-		if self.turns == 1:
-			word_points *= 2
-
-		if word_bonus:
-			for s in self.word.range:
-				self.points += word_bonus.get(s, 0) * word_points
-		else:
-			self.points += word_points
-
-		for w in self.word.extra_words:
-			word_points = 0
-			for l in w:
-				word_points += self.letter_points[l]
-			self.points += word_points
-
-		for s, l in self.word.extra_spots:
-			if letter_bonus:
-				self.points += letter_bonus.get(s, 0) * self.letter_points[l]
-
-		self.current_player.update_score(self.points)
+		return True
 
 	def handle_invalid_word(self):
 		if not self.challenging:

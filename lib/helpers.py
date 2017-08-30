@@ -2,25 +2,6 @@ import pickle, os, sys, subprocess
 
 from player import Player
 
-def set_letter_points():
-  points = {}
-  for letter in list('LSUNRTOAIE'):
-    points[letter] = 1
-  for letter in list('GD'):
-    points[letter] = 2
-  for letter in list('BCMP'):
-    points[letter] = 3
-  for letter in list('FHVWY'):
-    points[letter] = 4
-  for letter in list('JX'):
-    points[letter] = 8
-  for letter in list('QZ'):
-    points[letter] = 10
-  points['K'] = 5
-  points['@'] = 0
-
-  return points
-
 def save(game):
   if not os.path.exists('./saves'):
     os.mkdir('./saves')
