@@ -38,7 +38,7 @@ class Interface:
 	def start_local_game(self):
 		options = self.give_secondary_options()
 
-		if not options.get('save', False):
+		if not options.get('load_game', False):
 			options['players'] = input('\nHow many players will there be (2, 3, or 4)? ').strip()
 
 			while options['players'] not in ['2', '3', '4']:

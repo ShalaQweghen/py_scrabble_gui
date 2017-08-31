@@ -26,8 +26,8 @@ def save(game):
   data['points'] = game.points
   data['words'] = game.words
   data['word'] = game.word
-  data['limit'] = game.limit
-  data['challenging'] = game.challenging
+  data['time_limit'] = game.time_limit
+  data['challenge_mode'] = game.challenge_mode
   data['players'] = game.players
   data['players_info'] = players_list
 
@@ -60,8 +60,8 @@ def load(game):
   game.points = data['points']
   game.words = data['words']
   game.word = data['word']
-  game.limit = data['limit']
-  game.challenging = data['challenging']
+  game.time_limit = data['time_limit']
+  game.challenge_mode = data['challenge_mode']
   game.players = data['players']
 
   for p in data['players_info']:

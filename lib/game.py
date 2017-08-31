@@ -36,7 +36,7 @@ class Game:
 		if self.load_game:
 			helpers.load(self)
 			self.current_player = self.players_list[self.turns % self.players]
-		elif self.comp:
+		elif self.comp_game:
 			self.human = Player()
 			self.players_list.extend([AIOpponent(), self.human])
 			self.players_list[0].name = 'COMP'
@@ -74,7 +74,7 @@ class Game:
 	def initialize_turn(self):
 		if self.word:
 			self.words.append(self.word.word)
-			self.words.extend(self.word.extra_words)
+			self.words.extend(list(map(lambda x: x[0], self.word.extra_words)))
 
 			if self.save_meaning:
 				helpers.get_meaning(self.words)
@@ -95,10 +95,10 @@ class Game:
 		else:
 			self.current_player = self.players_list[self.turns % self.players]
 
-			if self.current_player is self.human or not self.comp:
+			if self.current_player is self.human or not self.comp_game:
 				self.board.display(self.current_player.output)
 				self.display_turn_info(self.current_player)
-			elif self.comp:
+			elif self.comp_game:
 				self.board.display(self.human.output)
 				self.display_turn_info(self.human)
 				print('\nIt\'s Computer\'s turn... {}\n'.format(self.current_player))
@@ -172,6 +172,8 @@ class Game:
 		return True
 
 	def handle_invalid_word(self):
+		self.current_player.return_wild_tile()
+
 		if not self.challenge_mode:
 			self.play_turn()
 		else:

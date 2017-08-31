@@ -80,6 +80,11 @@ class Player:
 		self.output.write('\n==================================================================\n\n')
 		self.output.flush()
 
+	def return_wild_tile(self):
+		if self.wild_tile:
+			self.letters[self.letters.index(self.wild_tile)] = '@'
+			self.wild_tile = None
+
 	def __str__(self):
 		return '{} has got {} points.'.format(self.name, self.score).center(70)
 
@@ -137,10 +142,7 @@ class Player:
 
 	def _letter_on_rack(self, word, l):
 		if l not in self.letters or (word or self.word.word).count(l) > self.letters.count(l):
-			if self.wild_tile:
-				self.letters[self.letters.index(self.wild_tile)] = '@'
-				self.wild_tile = None
-
+			self.return_wild_tile()
 			return False
 
 		return True

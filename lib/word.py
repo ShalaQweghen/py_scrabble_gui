@@ -10,7 +10,6 @@ class Word:
 
     self.valid = False
     self.extra_words = []
-    self.extra_spots = []
     self.invalid_word = False
 
     self.range = self._set_range()
@@ -22,7 +21,9 @@ class Word:
     aob_list = self.aob_list.copy()
 
     for i, square in enumerate(self.range):
-      extra_word = [self.word[i]]
+      extra_word = [[self.word[i]], [False, 0], [False, []]]
+
+      self._set_extra_bonus(square, self.word[i], extra_word)
 
       if self.board.board[square] in aob_list and self.board.square_occupied(square, self.direction):
         del aob_list[aob_list.index(self.board.board[square])]
@@ -32,11 +33,10 @@ class Word:
       else:
         self.extra_words.append(self._set_extra_word(square, extra_word))
 
-        if self.dict.valid_word(self.extra_words[-1]):
-          self.extra_spots.append((square, self.word[i]))
+        if self.dict.valid_word(self.extra_words[-1][0]):
           check_list.append(True)
         else:
-          self.invalid_word = self.extra_words[-1]
+          self.invalid_word = self.extra_words[-1][0]
           self.extra_words = []
           self.extra_spots = []
           check_list.append(False)
@@ -66,15 +66,20 @@ class Word:
     else:
       points += word_points
 
-    for w in self.extra_words:
+    for w, wb, lb in self.extra_words:
       word_points = 0
+
       for l in w:
         word_points += self.letter_points[l]
-      points += word_points
 
-    for s, l in self.extra_spots:
-      if letter_bonus:
-        points += letter_bonus.get(s, 0) * self.letter_points[l]
+      if lb[0]:
+        for le, b in lb[1]:
+          word_points += self.letter_points[le] * b
+
+      if wb[0]:
+        word_points *= wb[1]
+
+      points += word_points
 
     return points
 
@@ -156,22 +161,38 @@ class Word:
       for i, spot in enumerate(self.range):
         if self.board.board[spot] == self.word[i]:
           aob_list.append(self.word[i])
+
     return aob_list
 
   def _set_up_or_left_extra_word(self, square, extra_word):
     while self.board.occupied(square, self.direction, self.board.up_or_left):
       square = self.board.up_or_left(square, self.direction)
-      extra_word.insert(0, self.board.board[square])
+      extra_word[0].insert(0, self.board.board[square])
 
   def _set_down_or_right_extra_word(self, square, extra_word):
     while self.board.occupied(square, self.direction, self.board.down_or_right):
       square = self.board.down_or_right(square, self.direction)
-      extra_word.append(self.board.board[square])
+      extra_word[0].append(self.board.board[square])
 
   def _set_extra_word(self, square, extra_word):
     self._set_up_or_left_extra_word(square, extra_word)
     self._set_down_or_right_extra_word(square, extra_word)
-    return "".join(extra_word)
+    extra_word[0] = ''.join(extra_word[0])
+    return extra_word
+
+  def _set_extra_bonus(self, square, letter, extra_word):
+    if self.board.board[square] == '3w':
+      extra_word[1][0] = True
+      extra_word[1][1] += 3
+    elif self.board.board[square] == '2w':
+      extra_word[1][0] = True
+      extra_word[1][1] += 2
+    elif self.board.board[square] == '2l':
+      extra_word[2][0] = True
+      extra_word[2][1].append((letter, 1))
+    elif self.board.board[square] == '3l':
+      extra_word[2][0] = True
+      extra_word[2][1].append((letter, 2))
 
   def _set_letter_points(self):
     points = {}
