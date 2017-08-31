@@ -7,13 +7,15 @@ class Word:
     self.direction = direction
     self.word = word
     self.board = board
+
+    self.valid = False
     self.extra_words = []
     self.extra_spots = []
     self.invalid_word = False
+
     self.range = self._set_range()
     self.aob_list = self._set_aob_list()
     self.letter_points = self._set_letter_points()
-    self.valid = False
 
   def process_extra_words(self):
     check_list = []

@@ -84,13 +84,19 @@ def start_anew(game):
 
 def get_meaning(words):
   file = open('words.txt', 'a+')
-  file.write('\n=== {} ===\n'.format(datetime.datetime.now()))
+  file.write('\n=== {} ==='.format(datetime.datetime.now()))
 
   for word in words:
     file.write('\n#' + word.upper() + '#\n')
-    r = requests.get(url='http://api.pearson.com/v2/dictionaries/ldoce5/entries?headword=' + word).json()
+    try:
+      r = requests.get(url='http://api.pearson.com/v2/dictionaries/ldoce5/entries?headword=' + word).json()
 
-    for result in r['results']:
-      file.write('\n\t{} = {}\n'.format(result['headword'], result['senses'][0]['definition'][0]))
-      if result["senses"][0].get("examples", None):
-        file.write('\t\tEXP: {}\n'.format(result['senses'][0]['examples'][0]['text']))
+      for result in r['results']:
+        file.write('\n\t{} = {}\n'.format(result['headword'], result['senses'][0]['definition'][0]))
+
+        examples = result["senses"][0].get("examples", None)
+
+        if examples:
+          file.write('\t\tEXP: {}\n'.format(examples[0]['text']))
+    except requests.exceptions.ConnectionError:
+      file.write('\n!!! NO CONNECTION !!!\n')

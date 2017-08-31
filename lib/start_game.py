@@ -1,4 +1,8 @@
 import sys
 
-a = sys.argv[1:]
+a = sys.argv
+
+if '-d' in a:
+
+
 print(a)

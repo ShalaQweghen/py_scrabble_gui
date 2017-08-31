@@ -12,7 +12,7 @@ class Game:
 	def __init__(self, config={}):
 		self.board = Board()
 		self.bag = Bag()
-		self.dict = Dict('./lib/dic/sowpods.txt')
+		self.dict = Dict('./dics/sowpods.txt')
 		self.turns = 0
 		self.passes = 0
 		self.points = 0
@@ -20,16 +20,20 @@ class Game:
 		self.word = None
 		self.human = None
 		self.players_list = []
-		self.limit = config.get('limit', False)
+
 		self.streams = config.get('streams', False)
-		self.on_network = config.get('network', False)
-		self.challenging = config.get('challenge', False)
-		self.saved = config.get('saved', False)
 		self.players = int(config.get('players', 2))
-		self.comp = config.get('comp', False)
+		self.time_limit = config.get('time_limit', False)
+		self.save_meaning = config.get('save_meaning', False)
+
+		self.comp_game = config.get('comp_game', False)
+		self.load_game = config.get('load_game', False)
+		self.network_game = config.get('network_game', False)
+
+		self.challenge_mode = config.get('challenge_mode', False)
 
 	def initialize_game(self):
-		if self.saved:
+		if self.load_game:
 			helpers.load(self)
 			self.current_player = self.players_list[self.turns % self.players]
 		elif self.comp:
@@ -60,7 +64,7 @@ class Game:
 
 				self.players_list.append(player)
 
-			if self.limit:
+			if self.time_limit:
 				self.set_time_limit()
 
 			random.shuffle(self.players_list)
@@ -72,9 +76,12 @@ class Game:
 			self.words.append(self.word.word)
 			self.words.extend(self.word.extra_words)
 
+			if self.save_meaning:
+				helpers.get_meaning(self.words)
+
 		self.prev_player = self.current_player.name
 
-		if self.on_network:
+		if self.network_game:
 			for p in self.players_list:
 				self.board.display(p.output)
 				self.display_turn_info(p)
@@ -139,6 +146,9 @@ class Game:
 			if self.current_player.full_bonus and len(self.bag.bag) > 0:
 				self.points += 60
 
+			if self.current_player.wild_tile:
+				self.points -= self.word.letter_points[self.current_player.wild_tile]
+
 			self.current_player.update_score(self.points)
 			self.passes = 0
 		else:
@@ -156,13 +166,13 @@ class Game:
 		return True
 
 	def move_acceptable(self):
-		if self.limit and self.time_over():
+		if self.time_limit and self.time_over():
 			self.end_game()
 
 		return True
 
 	def handle_invalid_word(self):
-		if not self.challenging:
+		if not self.challenge_mode:
 			self.play_turn()
 		else:
 			self.passes += 1
@@ -172,10 +182,10 @@ class Game:
 	def set_time_limit(self):
 		try:
 			start_time = time.time()
-			self.end_time = start_time + int(self.limit) * 60
+			self.end_time = start_time + int(self.time_limit) * 60
 		except ValueError:
 			print('\nTime limit should be a whole number (1, 2, etc)...')
-			self.limit = input('Please enter the time limit in minutes: ')
+			self.time_limit = input('Please enter the time limit in minutes: ')
 			self.set_time_limit()
 
 	def time_over(self):
@@ -195,9 +205,9 @@ class Game:
 
 		winner = self.decide_winner()
 
-		for p in ((self.on_network and self.players_list) or [self.current_player]):
+		for p in ((self.network_game and self.players_list) or [self.current_player]):
 			p.output.write('\n==================================================================\n\n')
-			if self.limit and self.time_over():
+			if self.time_limit and self.time_over():
 				p.output.write('TIME IS UP!\n'.center(70))
 			else:
 				p.output.write('GAME IS OVER!\n'.center(70))

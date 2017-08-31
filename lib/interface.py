@@ -31,7 +31,7 @@ class Interface:
 
 	def start_against_comp(self):
 		options = self.give_secondary_options(computer=True)
-		options['comp'] = True
+		options['comp_game'] = True
 
 		Game(options).enter_game_loop()
 
@@ -73,7 +73,7 @@ class Interface:
 
 			options['streams'].append((c_input, c_output))
 
-		options['network'] = True
+		options['on_network'] = True
 
 		Game(options).enter_game_loop()
 
@@ -96,9 +96,9 @@ class Interface:
 
 		if action == '1': return {}
 		elif action == '2': return {'challenge': True}
-		elif not computer and action == '3': return {'limit': input('\nPlease enter the time limit in minutes: ')}
-		elif not computer and action == '4': return {'challenge': True, 'limit': input('\nPlease enter the time limit in minutes: ')}
-		elif continuable and action == '5': return {'saved': True}
+		elif not computer and action == '3': return {'time_limit': input('\nPlease enter the time limit in minutes: ')}
+		elif not computer and action == '4': return {'challenge_mode': True, 'time_limit': input('\nPlease enter the time limit in minutes: ')}
+		elif continuable and action == '5': return {'load_game': True}
 		elif action == '9': self.give_main_options()
 		elif action == '0': sys.exit()
 		else: self.give_secondary_options()

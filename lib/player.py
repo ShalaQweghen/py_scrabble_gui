@@ -133,7 +133,6 @@ class Player:
 				if not self._letter_on_rack(word, l):
 					return False
 
-		self.wild_tile = None
 		return True
 
 	def _letter_on_rack(self, word, l):
