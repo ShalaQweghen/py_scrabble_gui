@@ -2,6 +2,7 @@ import re
 
 class Board:
 	def __init__(self):
+		self.wild_tiles_on_board = []
 		self._prepare_board()
 		self._place_bonus()
 
@@ -59,9 +60,9 @@ class Board:
 			elif self.board[square] == '3w':
 				bonus['word'][square] = 3
 			elif self.board[square] == '2l':
-				bonus['letter'][square] = 1
-			elif self.board[square] == '3l':
 				bonus['letter'][square] = 2
+			elif self.board[square] == '3l':
+				bonus['letter'][square] = 3
 		return bonus
 
 	def valid_range(self, word_range, word, direction):

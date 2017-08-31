@@ -9,6 +9,7 @@ class Word:
     self.board = board
 
     self.valid = False
+    self.wild_tiles = []
     self.extra_words = []
     self.invalid_word = False
 
@@ -21,9 +22,7 @@ class Word:
     aob_list = self.aob_list.copy()
 
     for i, square in enumerate(self.range):
-      extra_word = [[self.word[i]], [False, 0], [False, []]]
-
-      self._set_extra_bonus(square, self.word[i], extra_word)
+      extra_word = [[self.word[i]], [square]]
 
       if self.board.board[square] in aob_list and self.board.square_occupied(square, self.direction):
         del aob_list[aob_list.index(self.board.board[square])]
@@ -38,54 +37,27 @@ class Word:
         else:
           self.invalid_word = self.extra_words[-1][0]
           self.extra_words = []
-          self.extra_spots = []
           check_list.append(False)
 
     return not (False in check_list)
 
-  def calculate_points(self):
+  def calculate_total_points(self):
     if not self.range:
       return 0
 
     bonus = self.board.calculate_bonus(self.range)
-    word_bonus = bonus.get('word', None)
-    letter_bonus = bonus.get('letter', None)
+    self.word_bonus = bonus.get('word', None)
+    self.letter_bonus = bonus.get('letter', None)
 
-    word_points = 0
-    points = 0
+    points = self._calculate_word_points(self.word, self.range)
 
-    for l, s in zip(self.word, self.range):
-      if letter_bonus:
-        word_points += (letter_bonus.get(s, 0) + 1) * self.letter_points[l]
-      else:
-        word_points += self.letter_points[l]
-
-    if word_bonus:
-      for s in self.range:
-        points += word_bonus.get(s, 0) * word_points
-    else:
-      points += word_points
-
-    for w, wb, lb in self.extra_words:
-      word_points = 0
-
-      for l in w:
-        word_points += self.letter_points[l]
-
-      if lb[0]:
-        for le, b in lb[1]:
-          word_points += self.letter_points[le] * b
-
-      if wb[0]:
-        word_points *= wb[1]
-
-      points += word_points
+    for word, w_range in self.extra_words:
+      points += self._calculate_word_points(word, w_range)
 
     return points
 
   def reset(self):
     self.extra_words = []
-    self.extra_spots = []
     self.word = None
 
   def valid_move(self):
@@ -168,31 +140,19 @@ class Word:
     while self.board.occupied(square, self.direction, self.board.up_or_left):
       square = self.board.up_or_left(square, self.direction)
       extra_word[0].insert(0, self.board.board[square])
+      extra_word[1].insert(0, square)
 
   def _set_down_or_right_extra_word(self, square, extra_word):
     while self.board.occupied(square, self.direction, self.board.down_or_right):
       square = self.board.down_or_right(square, self.direction)
       extra_word[0].append(self.board.board[square])
+      extra_word[1].append(square)
 
   def _set_extra_word(self, square, extra_word):
     self._set_up_or_left_extra_word(square, extra_word)
     self._set_down_or_right_extra_word(square, extra_word)
     extra_word[0] = ''.join(extra_word[0])
     return extra_word
-
-  def _set_extra_bonus(self, square, letter, extra_word):
-    if self.board.board[square] == '3w':
-      extra_word[1][0] = True
-      extra_word[1][1] += 3
-    elif self.board.board[square] == '2w':
-      extra_word[1][0] = True
-      extra_word[1][1] += 2
-    elif self.board.board[square] == '2l':
-      extra_word[2][0] = True
-      extra_word[2][1].append((letter, 1))
-    elif self.board.board[square] == '3l':
-      extra_word[2][0] = True
-      extra_word[2][1].append((letter, 2))
 
   def _set_letter_points(self):
     points = {}
@@ -212,3 +172,23 @@ class Word:
     points['@'] = 0
 
     return points
+
+  def _calculate_word_points(self, word, w_range):
+    word_points = 0
+
+    for l, s in zip(word, w_range):
+      if s in self.wild_tiles:
+        continue
+      elif s in self.board.wild_tiles_on_board:
+        continue
+      else:
+        if self.letter_bonus:
+          word_points += self.letter_bonus.get(s, 1) * self.letter_points[l]
+        else:
+          word_points += self.letter_points[l]
+
+    if self.word_bonus:
+      for s in w_range:
+        word_points += self.word_bonus.get(s, 1)
+
+    return word_points

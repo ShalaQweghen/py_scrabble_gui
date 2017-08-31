@@ -3,9 +3,12 @@ import sys, socket
 from game import Game
 
 class Interface:
-	def __init__(self):
+	def __init__(self, config):
+		self.options = config
+
 		print()
 		print('\033[1mCOMMANDLINE SCRABBLE\033[0m'.center(50))
+
 		self.give_main_options()
 
 	def give_main_options(self):
@@ -30,28 +33,28 @@ class Interface:
 		self.give_main_options()
 
 	def start_against_comp(self):
-		options = self.give_secondary_options(computer=True)
-		options['comp_game'] = True
+		self.options.update(self.give_secondary_options(computer=True))
+		self.options['comp_game'] = True
 
-		Game(options).enter_game_loop()
+		Game(self.options).enter_game_loop()
 
 	def start_local_game(self):
-		options = self.give_secondary_options()
+		self.options.update(self.give_secondary_options())
 
-		if not options.get('load_game', False):
-			options['players'] = input('\nHow many players will there be (2, 3, or 4)? ').strip()
+		if not self.options.get('load_game', False):
+			self.options['players'] = input('\nHow many players will there be (2, 3, or 4)? ').strip()
 
-			while options['players'] not in ['2', '3', '4']:
-				options['players'] = input('\n2, 3, or 4: ')
+			while self.options['players'] not in ['2', '3', '4']:
+				self.options['players'] = input('\n2, 3, or 4: ')
 
-		Game(options).enter_game_loop()
+		Game(self.options).enter_game_loop()
 
 	def start_network_game(self):
-		options = self.give_secondary_options(False)
-		options['players'] = input('\nHow many players will there be (2, 3, or 4)? ').strip()
+		self.options.update(self.give_secondary_options(False))
+		self.options['players'] = input('\nHow many players will there be (2, 3, or 4)? ').strip()
 
-		while options['players'] not in ['2', '3', '4']:
-			options['players'] = input('\n2, 3, or 4: ')
+		while self.options['players'] not in ['2', '3', '4']:
+			self.options['players'] = input('\n2, 3, or 4: ')
 
 		sock = socket.socket()
 		sock.setblocking(True)
@@ -63,19 +66,19 @@ class Interface:
 		sock.listen()
 		print('\nServer fired up on {}:{}... Waiting for opponents...\n'.format(host, port))
 
-		options['streams'] = []
+		self.options['streams'] = []
 
-		for i in range(int(options['players']) - 1):
+		for i in range(int(self.options['players']) - 1):
 			cli, addr = sock.accept()
 
 			c_input = cli.makefile('r')
 			c_output = cli.makefile('w')
 
-			options['streams'].append((c_input, c_output))
+			self.options['streams'].append((c_input, c_output))
 
-		options['on_network'] = True
+		self.options['network_game'] = True
 
-		Game(options).enter_game_loop()
+		Game(self.options).enter_game_loop()
 
 
 	def give_secondary_options(self, continuable=True, computer=False):
@@ -101,6 +104,4 @@ class Interface:
 		elif continuable and action == '5': return {'load_game': True}
 		elif action == '9': self.give_main_options()
 		elif action == '0': sys.exit()
-		else: self.give_secondary_options()
-
-Interface()
+		else: self.give_secondary_options(continuable, computer)

@@ -19,6 +19,7 @@ class Game:
 		self.words = []
 		self.word = None
 		self.human = None
+		self.words_list = set()
 		self.players_list = []
 
 		self.streams = config.get('streams', False)
@@ -75,9 +76,7 @@ class Game:
 		if self.word:
 			self.words.append(self.word.word)
 			self.words.extend(list(map(lambda x: x[0], self.word.extra_words)))
-
-			if self.save_meaning:
-				helpers.get_meaning(self.words)
+			self.words_list = self.words_list.union(set(self.words))
 
 		self.prev_player = self.current_player.name
 
@@ -135,7 +134,10 @@ class Game:
 			self.words = []
 			self.points = 0
 		elif self.move_acceptable() and self.word.validate():
-			self.points = self.word.calculate_points()
+			if self.word.wild_tiles:
+				self.board.wild_tiles_on_board.extend(self.word.wild_tiles)
+
+			self.points = self.word.calculate_total_points()
 
 			if self.turns == 1:
 				self.points *= 2
@@ -145,9 +147,6 @@ class Game:
 
 			if self.current_player.full_bonus and len(self.bag.bag) > 0:
 				self.points += 60
-
-			if self.current_player.wild_tile:
-				self.points -= self.word.letter_points[self.current_player.wild_tile]
 
 			self.current_player.update_score(self.points)
 			self.passes = 0
@@ -218,6 +217,9 @@ class Game:
 			p.output.write('The winner is \033[1m{}\033[0m with \033[1m{}\033[0m points!\n'.format(winner.name, winner.score).center(85))
 			p.output.write('\n==================================================================\n')
 
+		if self.save_meaning:
+			helpers.get_meaning(self.words_list)
+
 		sys.exit()
 
 	def remove_points(self):
@@ -241,7 +243,7 @@ class Game:
 					else:
 						self.turns -= 1
 			self.end_game()
-		except BrokenPipeError:
+		except (BrokenPipeError, ConnectionResetError):
 				for p in self.players_list:
 					try:
 						p.output.write('\nA player has quit the game. The game is cancelled.\n\n')

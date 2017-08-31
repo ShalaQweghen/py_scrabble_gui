@@ -8,7 +8,7 @@ class Player:
 		self.name = None
 		self.score = 0
 		self.letters = []
-		self.wild_tile = None
+		self.wild_tiles = []
 		self.is_passing = False
 		self.is_saving = False
 		self.word = None
@@ -36,7 +36,7 @@ class Player:
 		self.score += points
 
 	def get_move(self, bag, board, dic):
-		self.wild_tile = None
+		self.wild_tiles = []
 		self.is_passing = False
 		self.is_saving = False
 		self.full_bonus = False
@@ -81,9 +81,12 @@ class Player:
 		self.output.flush()
 
 	def return_wild_tile(self):
-		if self.wild_tile:
-			self.letters[self.letters.index(self.wild_tile)] = '@'
-			self.wild_tile = None
+		if self.wild_tiles:
+			print(self.letters)
+			for wt in self.wild_tiles:
+				self.letters[self.letters.index(wt)] = '@'
+
+			self.wild_tiles = []
 
 	def __str__(self):
 		return '{} has got {} points.'.format(self.name, self.score).center(70)
@@ -114,10 +117,15 @@ class Player:
 				self.get_move(bag, board, dic)
 
 	def _replace_wild_tile(self):
-		self.output.write("\nWhat letter will you use the wild tile for?: \n")
-		self.output.flush()
-		self.wild_tile = self.input.readline()[:-1].upper()
-		self.word.word = re.sub('@', self.wild_tile, self.word.word)
+		for i in range(self.word.word.count('@')):
+			self.output.write("\nWhat letter will you use the wild tile for?: \n")
+			self.output.flush()
+
+			self.wild_tiles.append(self.input.readline()[:-1].upper())
+
+		for wt in self.wild_tiles:
+			self.word.wild_tiles.append(self.word.range[self.word.word.index('@')])
+			self.word.word = re.sub('@', wt, self.word.word)
 
 	def _valid_letters(self, word=None):
 		if '@' in (word or self.word.word):
@@ -126,8 +134,9 @@ class Player:
 
 			self._replace_wild_tile()
 
-		if self.wild_tile:
-			self.letters[self.letters.index('@')] = self.wild_tile
+		if self.wild_tiles:
+			for wt in self.wild_tiles:
+				self.letters[self.letters.index('@')] = wt
 
 		for l in (word or self.word.word):
 			try:

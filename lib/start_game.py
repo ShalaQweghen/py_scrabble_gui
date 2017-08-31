@@ -1,8 +1,10 @@
 import sys
 
-a = sys.argv
+from interface import Interface
 
-if '-d' in a:
+config = {}
 
+if '-d' in sys.argv:
+  config['save_meaning'] = True
 
-print(a)
+Interface(config)

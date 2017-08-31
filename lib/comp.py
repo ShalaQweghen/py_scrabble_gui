@@ -4,14 +4,18 @@ from player import Player
 
 class AIOpponent(Player):
   def get_move(self, bag, board, dic):
+    self.wild_tiles = []
     self.full_bonus = False
     self.is_passing = False
 
     if '@' in self.letters:
-      self.letters[self.letters.index('@')] = 'S'
+      for i in range(self.letters.count('@')):
+        self.letters[self.letters.index('@')] = 'S'
+        self.wild_tiles.append('S')
 
     words = []
     word_set = set()
+
     for n in range(2, len(self.letters) + 1):
       word_set = word_set.union(self._permute(n, dic))
 
@@ -32,8 +36,16 @@ class AIOpponent(Player):
     else:
       self.word = words[0]
 
+      for i in range(len(self.wild_tiles)):
+        if 'S' in self.word.word:
+          self.word.wild_tiles.append(self.word.range[self.word.word.index('S')])
+
       for word in words:
-        if word.calculate_points() > self.word.calculate_points():
+        for i in range(len(self.wild_tiles)):
+          if 'S' in word.word:
+            word.wild_tiles.append(word.range[word.word.index('S')])
+
+        if word.calculate_total_points() > self.word.calculate_total_points():
           self.word = word
 
   def _permute(self, n, dic):

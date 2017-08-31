@@ -1,6 +1,7 @@
 import pickle, os, sys, subprocess, datetime, requests
 
 from player import Player
+from comp import AIOpponent
 
 def save(game):
   if not os.path.exists('./saves'):
@@ -16,7 +17,7 @@ def save(game):
   players_list = []
 
   for p in game.players_list:
-    players_list.append([p.name, p.score, p.letters])
+    players_list.append([p.name, p.score, p.letters, type(p).__name__ == 'AIOpponent'])
 
   data = {}
   data['board'] = game.board
@@ -30,6 +31,9 @@ def save(game):
   data['challenge_mode'] = game.challenge_mode
   data['players'] = game.players
   data['players_info'] = players_list
+  data['comp_game'] = game.comp_game
+  data['words_list'] = game.words_list
+  data['save_meaning'] = game.save_meaning
 
   file = open('./saves/' + filename + '.obj', 'wb')
   pickle.dump(data, file)
@@ -63,9 +67,19 @@ def load(game):
   game.time_limit = data['time_limit']
   game.challenge_mode = data['challenge_mode']
   game.players = data['players']
+  game.comp_game = data['comp_game']
+  game.words_list = data['words_list']
+  game.save_meaning = data['save_meaning']
 
   for p in data['players_info']:
-    player = Player()
+    if p[3]:
+      player = AIOpponent()
+    elif game.comp_game:
+      player = Player()
+      game.human = player
+    else:
+      player = Player()
+
     player.name = p[0]
     player.score = p[1]
     player.letters = p[2]
@@ -100,3 +114,5 @@ def get_meaning(words):
           file.write('\t\tEXP: {}\n'.format(examples[0]['text']))
     except requests.exceptions.ConnectionError:
       file.write('\n!!! NO CONNECTION !!!\n')
+    except KeyError:
+      file.write('\n!!! UNABLE TO GET DEFINITION !!!\n')
