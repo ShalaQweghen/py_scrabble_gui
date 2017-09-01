@@ -202,16 +202,29 @@ class Game:
 
 		return winner
 
+	def display_last_turn_info(self, output):
+		self.words.append(self.word.word)
+		self.words.extend(list(map(lambda x: x[0], self.word.extra_words)))
+		self.words_list = self.words_list.union(set(self.words))
+		self.board.display(p.output)
+
+		output.write('\n\n')
+		output.write("\033[1mWords:\033[0m {} for {} pts by {}\n\n".format(self.words, self.points, self.current_player.name).center(75))
+		output.flush()
+
 	def end_game(self):
 		self.remove_points()
 
 		winner = self.decide_winner()
 
 		for p in ((self.network_game and self.players_list) or [self.current_player]):
-			p.output.write('\n==================================================================\n\n')
 			if self.time_limit and self.time_over():
+				p.output.write('\n==================================================================\n\n')
 				p.output.write('TIME IS UP!\n'.center(70))
 			else:
+				self.display_last_turn_info(p.output)
+
+				p.output.write('\n==================================================================\n\n')
 				p.output.write('GAME IS OVER!\n'.center(70))
 
 			p.output.write('\n')
