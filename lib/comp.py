@@ -1,6 +1,7 @@
 import sys, itertools, random
-from word import Word
-from player import Player
+
+from lib.word import Word
+from lib.player import Player
 
 class AIOpponent(Player):
   def get_move(self, bag, board, dic):

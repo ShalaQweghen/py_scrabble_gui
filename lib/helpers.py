@@ -1,7 +1,7 @@
 import pickle, os, sys, subprocess, datetime, requests
 
-from player import Player
-from comp import AIOpponent
+from lib.player import Player
+from lib.comp import AIOpponent
 
 def save(game):
   if not os.path.exists('./saves'):
@@ -93,7 +93,7 @@ def ask_filename(game):
 
 def start_anew(game):
   os.system('sleep 1')
-  game.saved = False
+  game.load_game = False
   game.enter_game_loop()
 
 def get_meaning(words):

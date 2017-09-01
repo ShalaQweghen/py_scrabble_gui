@@ -1,6 +1,6 @@
 import sys, socket
 
-from game import Game
+from lib.game import Game
 
 class Interface:
 	def __init__(self, config):
@@ -16,7 +16,7 @@ class Interface:
 		print('\033[1m1\033[0m => Game against computer')
 		print('\033[1m2\033[0m => Game options on this computer')
 		print('\033[1m3\033[0m => Game options on the network')
-		print('\033[1m9\033[0m => Exit')
+		print('\n\033[1m9\033[0m => Exit')
 
 		action = input('\nPick an action: ')
 
@@ -88,9 +88,13 @@ class Interface:
 		if not computer:
 			print('\033[1m3\033[0m => Start a new game on normal mode with a time limit')
 			print('\033[1m4\033[0m => Start a new game on challenge mode with a time limit')
+		else:
+			print()
 
 		if continuable:
-			print('\033[1m5\033[0m => Continue a saved game')
+			print('\033[1m5\033[0m => Continue a saved game\n')
+		else:
+			print()
 
 		print('\033[1m9\033[0m => Go to previous menu')
 		print('\033[1m0\033[0m => Exit')

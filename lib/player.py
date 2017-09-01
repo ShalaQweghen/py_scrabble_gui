@@ -1,5 +1,5 @@
 import sys, re
-from word import Word
+from lib.word import Word
 
 class Player:
 	def __init__(self, inp=sys.stdin, outp=sys.stdout, name=None):

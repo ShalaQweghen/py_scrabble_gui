@@ -1,12 +1,12 @@
 import random, time, sys
 
-import helpers as helpers
+import lib.helpers as helpers
 
-from bag import Bag
-from board import Board
-from player import Player
-from dic import Dict
-from comp import AIOpponent
+from lib.bag import Bag
+from lib.board import Board
+from lib.player import Player
+from lib.dic import Dict
+from lib.comp import AIOpponent
 
 class Game:
 	def __init__(self, config={}):

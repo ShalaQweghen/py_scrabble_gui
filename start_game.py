@@ -1,6 +1,6 @@
 import sys
 
-from interface import Interface
+from lib.interface import Interface
 
 config = {}
 
