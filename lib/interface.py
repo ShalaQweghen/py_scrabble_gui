@@ -58,13 +58,14 @@ class Interface:
 
 		sock = socket.socket()
 		sock.setblocking(True)
-		host = '192.168.1.7'
+
+		host = ''
 		port = 12345
 
 		sock.bind((host, port))
-
 		sock.listen()
-		print('\nServer fired up on {}:{}... Waiting for opponents...\n'.format(host, port))
+
+		print('\nServer fired up on localhost:{}... Waiting for opponents...\n'.format(port))
 
 		self.options['streams'] = []
 
