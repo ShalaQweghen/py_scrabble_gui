@@ -78,7 +78,7 @@ class Game:
 			self.words.extend(list(map(lambda x: x[0], self.word.extra_words)))
 			self.words_list = self.words_list.union(set(self.words))
 
-		self.prev_player = self.current_player.name
+		self.prev_player = self.current_player
 
 		if self.network_game:
 			for p in self.players_list:
@@ -113,7 +113,7 @@ class Game:
 		)
 		p.output.write(
 			"\033[1mLetters Left in Bag:\033[0m {}\t\033[1m|\033[0m  \033[1mWords:\033[0m {} for {} pts by {}\n\n".format(
-				len(self.bag.bag), self.words, self.points, self.prev_player
+				len(self.bag.bag), self.words, self.points, self.prev_player.name
 			)
 		)
 		p.output.write("\u2551 {} \u2551\n".format(' - '.join(p.letters)).center(70))
@@ -167,6 +167,7 @@ class Game:
 	def move_acceptable(self):
 		if self.time_limit and self.time_over():
 			self.end_game()
+			return False
 
 		return True
 
@@ -214,6 +215,12 @@ class Game:
 				p.output.write('GAME IS OVER!\n'.center(70))
 
 			p.output.write('\n')
+
+			for pl in self.players_list:
+				p.output.write((str(pl) + '\n').center(70))
+
+			p.output.write('\n')
+
 			p.output.write('The winner is \033[1m{}\033[0m with \033[1m{}\033[0m points!\n'.format(winner.name, winner.score).center(85))
 			p.output.write('\n==================================================================\n')
 
@@ -224,9 +231,9 @@ class Game:
 
 	def remove_points(self):
 		for p in self.players_list:
-			if p.letters:
+			while p.letters:
 				for l in p.letters:
-					p.update_score(-(self.word.letter_points[l]))
+					p.update_score(-(self.prev_player.word.letter_points[l]))
 					p.letters.remove(l)
 
 	def enter_game_loop(self):

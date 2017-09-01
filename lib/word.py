@@ -189,6 +189,6 @@ class Word:
 
     if self.word_bonus:
       for s in w_range:
-        word_points += self.word_bonus.get(s, 1)
+        word_points *= self.word_bonus.get(s, 1)
 
     return word_points

@@ -82,7 +82,6 @@ class Player:
 
 	def return_wild_tile(self):
 		if self.wild_tiles:
-			print(self.letters)
 			for wt in self.wild_tiles:
 				self.letters[self.letters.index(wt)] = '@'
 
