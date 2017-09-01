@@ -206,7 +206,7 @@ class Game:
 		self.words.append(self.word.word)
 		self.words.extend(list(map(lambda x: x[0], self.word.extra_words)))
 		self.words_list = self.words_list.union(set(self.words))
-		self.board.display(p.output)
+		self.board.display(output)
 
 		output.write('\n\n')
 		output.write("\033[1mWords:\033[0m {} for {} pts by {}\n\n".format(self.words, self.points, self.current_player.name).center(75))
