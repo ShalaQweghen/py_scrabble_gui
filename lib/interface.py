@@ -28,7 +28,7 @@ class Interface:
 		else: self.give_main_options()
 
 	def print_read_me(self):
-		readme = open('./lib/README.txt', 'r').read()
+		readme = open('./lib/info.txt', 'r').read()
 		print(readme)
 		self.give_main_options()
 
