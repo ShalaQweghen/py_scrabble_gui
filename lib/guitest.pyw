@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter.messagebox import *
-from tile import Tile
+from tile import BoardTile, RackTile
+from side_frame import SideFrame
 
 def notdone():
   showerror('Not implemented', 'Not yet available')
@@ -22,31 +23,15 @@ file.add_command(label='Load Game', command=notdone, underline=0)
 file.add_command(label='Quit', command=root.quit, underline=0)
 top.add_cascade(label='Game', menu=file, underline=0)
 
-th = Frame(root)
-th.pack(side=TOP)
-Label(th, text='', bd=1, height=2, width=4, relief=RIDGE).pack(side=LEFT)
-for i in range(97, 112):
-  Label(th, text=chr(i), bd=1, height=2, width=4, relief=RIDGE).pack(side=LEFT)
-Label(th, text='', bd=1, height=2, width=4, relief=RIDGE).pack(side=LEFT)
+boardoutframe = Frame(root)
+boardoutframe.pack()
 
-bh = Frame(root)
-bh.pack(side=BOTTOM)
-Label(bh, text='', bd=1, height=2, width=4, relief=RIDGE).pack(side=LEFT)
-for i in range(97, 112):
-  Label(bh, text=chr(i), bd=1, height=2, width=4, relief=RIDGE).pack(side=LEFT)
-Label(bh, text='', bd=1, height=2, width=4, relief=RIDGE).pack(side=LEFT)
+SideFrame(TOP, range(97, 112), boardoutframe)
+SideFrame(BOTTOM, range(97, 112), boardoutframe)
+SideFrame(LEFT, range(1, 16), boardoutframe)
+SideFrame(RIGHT, range(1, 16), boardoutframe)
 
-lh = Frame(root)
-lh.pack(side=LEFT)
-for i in range(1, 16):
-  Label(lh, text=str(i), bd=1, height=2, width=4, relief=RIDGE).pack(side=BOTTOM)
-
-rh = Frame(root)
-rh.pack(side=RIGHT)
-for i in range(1, 16):
-  Label(rh, text=str(i), bd=1, height=2, width=4, relief=RIDGE).pack(side=BOTTOM)
-
-boardframe = Frame(root)
+boardframe = Frame(boardoutframe)
 boardframe.pack()
 
 start = None
@@ -54,11 +39,32 @@ start = None
 def handleEvent(event):
   global start
 
-  if start:
-    event.widget.master.var.set(start.get())
-    start = None
+  start_name = type(start).__name__
+  widget_name = type(event.widget).__name__
+  widget_var = event.widget.var
+
+  if start_name == 'RackTile' and start.var.get() != '':
+    if widget_name == 'BoardTile':
+      if widget_var.get() == '':
+        widget_var.set(start.var.get())
+        start.var.set('')
+        start = None
+    elif widget_name == 'RackTile':
+      temp = widget_var.get()
+      widget_var.set(start.var.get())
+      start.var.set(temp)
+      start = None
+    else:
+      start = None
+  elif start_name == 'BoardTile' and start.var.get() != '':
+    if widget_name == 'RackTile' and widget_var.get() == '':
+      widget_var.set(start.var.get())
+      start.var.set('')
+      start = None
+    elif widget_name == 'BoardTile' and widget_var.get() == start.var.get():
+      start = None
   else:
-    start = event.widget.master.var
+    start = event.widget
 
 c = range(97, 112)
 r = range(1, 16)
@@ -66,10 +72,17 @@ row = 0
 while row < 15:
   col = 0
   while col < 15:
-    t = Tile(row, col, boardframe)
-    t.label.bind('<1>', handleEvent)
+    t = BoardTile(row, col, boardframe)
+    t.bind('<1>', handleEvent)
     col += 1
   row += 1
+
+rack = Frame(root)
+rack.pack()
+
+for i in range(7):
+  t = RackTile(rack, str(i))
+  t.bind('<1>', handleEvent)
 
 
 root.title('PyScrabble')
