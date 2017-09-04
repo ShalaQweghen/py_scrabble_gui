@@ -6,13 +6,13 @@ class Tile(Label):
     self.var.set(letter)
 
     Label.__init__(self, parent, textvariable=self.var, **options)
-    self.config(bd=1, height=2, width=4, relief=SUNKEN)
+    self.config(bd=1, bg='#E9BE99',height=2, width=4, relief=SUNKEN)
 
 
 class BoardTile(Tile):
   def __init__(self, row, col, parent=None, letter='', **options):
     Tile.__init__(self, parent, letter, **options)
-    self.grid(row=row, column=col)
+    self.grid(row=row, column=col, sticky=W+E+N+S)
 
 class RackTile(Tile):
   def __init__(self, parent=None, letter='', **options):

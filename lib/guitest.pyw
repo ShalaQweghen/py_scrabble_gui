@@ -9,7 +9,7 @@ def notdone():
 root = Tk()
 
 top = Menu(root)
-root.config(menu=top)
+root.config(menu=top, bg='azure')
 
 file = Menu(top)
 
@@ -23,8 +23,22 @@ file.add_command(label='Load Game', command=notdone, underline=0)
 file.add_command(label='Quit', command=root.quit, underline=0)
 top.add_cascade(label='Game', menu=file, underline=0)
 
-boardoutframe = Frame(root)
+boardoutframe = Frame(root, padx=30, bg='azure')
 boardoutframe.pack()
+
+score = Frame(boardoutframe, pady=20, bg='azure')
+score.pack(side=TOP, fill=X)
+my = Label(score, text='My Score = 15', height=2, bg='#ADFF2F', fg='#1a1a1a', padx=5)
+my.pack(side=LEFT, padx=13)
+
+op = Label(score, text='Opponent\'s Score = 115', height=2, fg='#1a1a1a', bg='#FF4500', padx=5)
+op.pack(side=LEFT, padx=13)
+
+bag = Label(score, text='Tiles in Bag = 75', height=2, bg='dark gray', fg='white', padx=5)
+bag.pack(side=LEFT, padx=13)
+
+time = Label(score, text='Time Left = 15 min', height=2, bg='dark gray', fg='white', padx=5)
+time.pack(side=LEFT, padx=13)
 
 SideFrame(TOP, range(97, 112), boardoutframe)
 SideFrame(BOTTOM, range(97, 112), boardoutframe)
@@ -77,7 +91,7 @@ while row < 15:
     col += 1
   row += 1
 
-rack = Frame(root)
+rack = Frame(root, pady=15, bg='azure')
 rack.pack()
 
 for i in range(7):
@@ -85,7 +99,18 @@ for i in range(7):
   t.bind('<1>', handleEvent)
 
 
+buttons = Frame(root, bg='azure')
+buttons.pack()
+submit = Button(buttons, text='SUBMIT', command=notdone)
+submit.pack(side=LEFT, padx=5)
+pas = Button(buttons, text='PASS', command=notdone)
+pas.pack(side=LEFT, padx=5)
+quit = Button(buttons, text='CHALLENGE', command=notdone)
+quit.pack(side=RIGHT, padx=5)
+
+root.update()
+root.geometry()
 root.title('PyScrabble')
-root.config(height=1000, width=1000)
+root.minsize(root.winfo_width(), root.winfo_height() + 20)
 root.mainloop()
 
