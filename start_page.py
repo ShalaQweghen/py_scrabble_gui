@@ -1,5 +1,4 @@
 from tkinter import *
-from name_popup import PlayerNamePopup
 
 class StartPage(Frame):
   def __init__(self, parent, controller, **options):
