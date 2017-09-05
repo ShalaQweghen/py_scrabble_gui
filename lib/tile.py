@@ -8,7 +8,6 @@ class Tile(Label):
     Label.__init__(self, parent, textvariable=self.var, **options)
     self.config(bd=1, bg='#E9BE99',height=2, width=4, relief=SUNKEN)
 
-
 class BoardTile(Tile):
   def __init__(self, row, col, parent=None, letter='', **options):
     Tile.__init__(self, parent, letter, **options)
