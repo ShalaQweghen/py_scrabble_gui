@@ -12,7 +12,7 @@ from lib.board import Board
 from lib.comp import AIOpponent
 
 class GamePage(Frame):
-  def __init__(self, parent, controller, **options):
+  def __init__(self, parent, controller):
     self.controller = controller
 
     self.dict = Dict('./dics/sowpods.txt')
@@ -26,13 +26,12 @@ class GamePage(Frame):
     self.my_score = 0
     self.start = None
     self.letters = {}
-    self.move = None
     self.word = None
     self.empty_tiles = []
     self.gui_board = {}
     self.used_spots = {}
 
-    Frame.__init__(self, parent, **options)
+    Frame.__init__(self, parent, bg='azure')
 
     self.status_var = StringVar()
     self.my_var = StringVar()
@@ -198,61 +197,50 @@ class GamePage(Frame):
 
 
   def construct_move(self):
-    word = []
-    sorted_keys = sorted(self.letters)
-    check1 = sorted_keys[0][0]
-    check2 = sorted_keys[-1][0]
+    self.sorted_keys = sorted(self.letters)
+
+    raw_word = []
+    check1 = self.sorted_keys[0][0]
+    check2 = self.sorted_keys[-1][0]
 
     if check1 == check2:
-      direction = 'd'
-      sorted_keys.reverse()
+      self.direction = 'd'
+      n = sorted([int(x[1:]) for x in self.sorted_keys])
+      self.sorted_keys = [check1 + str(x) for x in n]
+      self.sorted_keys.reverse()
     else:
-      direction = 'r'
+      self.direction = 'r'
 
-    for key in sorted_keys:
-      word.append(self.letters[key].var.get())
+    for key in self.sorted_keys:
+      raw_word.append(self.letters[key].var.get())
 
-    if direction == 'd':
-      flag = True
-      bef = sorted_keys[0][0] + str(int(sorted_keys[0][1:]) + 1)
-      aft = sorted_keys[-1][0] + str(int(sorted_keys[-1][1:]) - 1)
-      while flag:
-        if aft not in self.gui_board and int(aft[1:]) in range(1, 16):
-          word.append(self.used_spots[aft].var.get())
-          sorted_keys.append(aft)
-          aft = aft[0] + str(int(aft[1:]) - 1)
-        elif bef not in self.gui_board and int(bef[1:]) in range(1, 16):
-          word.insert(0, self.used_spots[bef].var.get())
-          sorted_keys.insert(0, bef)
-          bef = bef[0] + str(int(bef[1:]) + 1)
-        else:
-          flag = False
-    else:
-      flag = True
-      bef = chr(ord(sorted_keys[0][0]) - 1) + sorted_keys[0][1:]
-      aft = chr(ord(sorted_keys[-1][0]) + 1) + sorted_keys[-1][1:]
-      while flag:
-        if aft not in self.gui_board and ord(aft[0]) in range(97, 112):
-          word.append(self.used_spots[aft].var.get())
-          sorted_keys.append(aft)
-          aft = chr(ord(aft[0]) + 1) + aft[1:]
-        elif bef not in self.gui_board and ord(bef[0]) in range(97, 112):
-          word.insert(0, self.used_spots[bef].var.get())
-          sorted_keys.insert(0, bef)
-          bef = chr(ord(bef[0]) - 1) + bef[1:]
-        else:
-          flag = False
+    self.aob_list = []
 
-    self.word = Word(sorted_keys[0], direction, ''.join(word), self.board, self.dict)
+    for key in self.sorted_keys:
+      self.add_letters_on_board(key)
+
+    offset = 0
+    leng = len(self.sorted_keys)
+    for s, i, l in self.aob_list:
+      if i < 0:
+        i = 0
+      elif i > leng:
+        i = leng - 1
+
+      self.sorted_keys.insert(i + offset, s)
+      raw_word.insert(i + offset, l)
+      offset += 1
+
+    self.word = Word(self.sorted_keys[0], self.direction, ''.join(raw_word), self.board, self.dict)
 
     if self.word.validate():
-      for key in sorted_keys:
+      for key in self.sorted_keys:
         if key in self.letters:
           self.letters[key].active = False
           self.used_spots[key] = self.gui_board[key]
           del self.gui_board[key]
 
-      self.board.place(word, sorted_keys)
+      self.board.place(raw_word, self.sorted_keys)
 
       self.letters = {}
       self.my_score += self.word.calculate_total_points()
@@ -280,5 +268,32 @@ class GamePage(Frame):
 
     self.empty_tiles = []
 
-
-
+  def add_letters_on_board(self, spot):
+    if self.direction == 'd':
+      flag = True
+      bef = spot[0] + str(int(spot[1:]) + 1)
+      aft = spot[0] + str(int(spot[1:]) - 1)
+      check = [x[0] for x in self.aob_list if x[0] == aft or x[0] == bef]
+      while flag and not check:
+        if aft not in self.gui_board and int(aft[1:]) in range(1, 16):
+          self.aob_list.append((aft, self.sorted_keys.index(spot) + 1, self.used_spots[aft].var.get()))
+          aft = aft[0] + str(int(aft[1:]) - 1)
+        elif bef not in self.gui_board and int(bef[1:]) in range(1, 16):
+          self.aob_list.insert(0, (bef, self.sorted_keys.index(spot) - 1, self.used_spots[bef].var.get()))
+          bef = bef[0] + str(int(bef[1:]) + 1)
+        else:
+          flag = False
+    else:
+      flag = True
+      bef = chr(ord(spot[0]) - 1) + spot[1:]
+      aft = chr(ord(spot[0]) + 1) + spot[1:]
+      check = [x[0] for x in self.aob_list if x[0] == aft or x[0] == bef]
+      while flag and not check:
+        if aft not in self.gui_board and ord(aft[0]) in range(97, 112):
+          self.aob_list.append((aft, self.sorted_keys.index(spot) + 1, self.used_spots[aft].var.get()))
+          aft = chr(ord(aft[0]) + 1) + aft[1:]
+        elif bef not in self.gui_board and ord(bef[0]) in range(97, 112):
+          self.aob_list.insert(0, (bef, self.sorted_keys.index(spot) - 1, self.used_spots[bef].var.get()))
+          bef = chr(ord(bef[0]) - 1) + bef[1:]
+        else:
+          flag = False

@@ -1,8 +1,8 @@
 from tkinter import *
 
 class StartPage(Frame):
-  def __init__(self, parent, controller, **options):
-    Frame.__init__(self, parent, bg='azure', **options)
+  def __init__(self, parent, controller):
+    Frame.__init__(self, parent, bg='azure')
 
     self.controller = controller
 
