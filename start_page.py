@@ -70,8 +70,8 @@ class CompStartPage(StartPage):
     self.options['time_limit'] = self.time_var.get()
     self.options['player_name'] = self.name_var.get()
     self.options['challenge_mode'] = bool(self.chal_var.get())
-    print(self.options)
-    self.controller.geometry("704x772")
+    self.controller.geometry("704x792")
+    self.controller.minsize(704, 792)
     self.controller.show_frame('GamePage')
 
 #############################################################################
@@ -98,8 +98,8 @@ class LANStartPage(CompStartPage):
     self.options['player_name'] = self.play_var.get()
     self.options['players'] = self.play_var.get()
     self.options['challenge_mode'] = bool(self.chal_var.get())
-    print(self.options)
-    self.controller.geometry("704x772")
+    self.controller.geometry("704x792")
+    self.controller.minsize(704, 792)
     self.controller.show_frame('GamePage')
 
 #############################################################################
@@ -152,8 +152,8 @@ class NormalStartPage(StartPage):
       self.options['players'] = self.play_var.get()
       self.options['names'] = self.players
       self.options['challenge_mode'] = bool(self.chal_var.get())
-      print(self.options)
-      self.controller.geometry("704x772")
+      self.controller.geometry('704x792')
+      self.controller.minsize(704, 792)
       self.controller.show_frame('GamePage')
     else:
       self.draw_name_fields()

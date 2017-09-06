@@ -7,6 +7,7 @@ class Root(Tk):
   def __init__(self):
     Tk.__init__(self)
     self.title('PyScrabble')
+    self.config(bg='azure')
 
     self.container = Frame(self, bg='azure')
     self.container.pack(side=TOP, fill=BOTH, expand=YES)
@@ -48,6 +49,7 @@ class Root(Tk):
 
   def go_to_beginning(self):
     self.geometry("704x420")
+    self.minsize(704, 420)
     self.deconstruct_frames()
     self.construct_frames()
 

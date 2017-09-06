@@ -8,6 +8,7 @@ class Word:
     self.word = word
     self.board = board
 
+    self.points = 0
     self.valid = False
     self.wild_tiles = []
     self.extra_words = []
@@ -43,18 +44,19 @@ class Word:
 
   def calculate_total_points(self):
     if not self.range:
-      return 0
+      self.points = 0
+      return self.points
 
     bonus = self.board.calculate_bonus(self.range)
     self.word_bonus = bonus.get('word', None)
     self.letter_bonus = bonus.get('letter', None)
 
-    points = self._calculate_word_points(self.word, self.range)
+    self.points = self._calculate_word_points(self.word, self.range)
 
     for word, w_range in self.extra_words:
-      points += self._calculate_word_points(word, w_range)
+      self.points += self._calculate_word_points(word, w_range)
 
-    return points
+    return self.points
 
   def reset(self):
     self.extra_words = []

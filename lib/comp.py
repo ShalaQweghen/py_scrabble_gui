@@ -49,6 +49,8 @@ class AIOpponent(Player):
         if word.calculate_total_points() > self.word.calculate_total_points():
           self.word = word
 
+      return self.word
+
   def _permute(self, n, dic):
     words = set()
     perms = itertools.permutations(self.letters, n)
