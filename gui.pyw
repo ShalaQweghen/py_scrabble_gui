@@ -1,5 +1,7 @@
+#! /usr/local/bin/python3
+
 from tkinter import *
-from start_page import CompStartPage, NormalStartPage, LANStartPage
+from start_page import NormalStartPage, LANStartPage
 from game_page import GamePage
 from entry_page import EntryPage
 
@@ -8,6 +10,7 @@ class Root(Tk):
     Tk.__init__(self)
     self.title('PyScrabble')
     self.config(bg='azure')
+    self.iconbitmap('./pics/pyscrabble.ico')
 
     self.container = Frame(self, bg='azure')
     self.container.pack(side=TOP, fill=BOTH, expand=YES)
@@ -20,7 +23,7 @@ class Root(Tk):
   def construct_frames(self):
     self.frames = {}
 
-    for F in (EntryPage, CompStartPage, NormalStartPage, LANStartPage, GamePage):
+    for F in (EntryPage, NormalStartPage, LANStartPage, GamePage):
       page_name = F.__name__
       f = F(parent=self.container, controller=self)
       self.frames[page_name] = f

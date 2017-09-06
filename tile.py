@@ -4,7 +4,6 @@ class Tile(Label):
   def __init__(self, parent=None, letter=''):
     self.var = StringVar()
     self.var.set(letter)
-    self.letter = None
 
     Label.__init__(self, parent, textvariable=self.var)
     self.config(bd=1, bg='#E9BE99',height=2, width=4, relief=SUNKEN)

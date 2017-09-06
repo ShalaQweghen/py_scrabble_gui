@@ -55,7 +55,7 @@ class StartPage(Frame):
 
 #############################################################################
 
-class CompStartPage(StartPage):
+class LANStartPage(StartPage):
   def draw_player_name(self):
     self.name_var = StringVar()
 
@@ -65,18 +65,6 @@ class CompStartPage(StartPage):
     Label(f, text='Enter Your Name:', bg='azure').pack(side=LEFT)
     Entry(f, textvariable=self.name_var).pack(side=LEFT)
 
-  def construct_options(self):
-    self.options['comp_mode'] = True
-    self.options['time_limit'] = self.time_var.get()
-    self.options['player_name'] = self.name_var.get()
-    self.options['challenge_mode'] = bool(self.chal_var.get())
-    self.controller.geometry("704x792")
-    self.controller.minsize(704, 792)
-    self.controller.show_frame('GamePage')
-
-#############################################################################
-
-class LANStartPage(CompStartPage):
   def draw_player_options(self):
     self.play_var = IntVar()
     self.play_dict = {'2 players': 2,
@@ -98,8 +86,8 @@ class LANStartPage(CompStartPage):
     self.options['player_name'] = self.play_var.get()
     self.options['players'] = self.play_var.get()
     self.options['challenge_mode'] = bool(self.chal_var.get())
-    self.controller.geometry("704x792")
-    self.controller.minsize(704, 792)
+    self.controller.geometry("704x772")
+    self.controller.minsize(704, 772)
     self.controller.show_frame('GamePage')
 
 #############################################################################
@@ -152,8 +140,8 @@ class NormalStartPage(StartPage):
       self.options['players'] = self.play_var.get()
       self.options['names'] = self.players
       self.options['challenge_mode'] = bool(self.chal_var.get())
-      self.controller.geometry('704x792')
-      self.controller.minsize(704, 792)
+      self.controller.geometry('704x772')
+      self.controller.minsize(704, 772)
       self.controller.show_frame('GamePage')
     else:
       self.draw_name_fields()

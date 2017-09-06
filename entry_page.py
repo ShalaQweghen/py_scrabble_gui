@@ -14,7 +14,7 @@ class EntryPage(Frame):
     f = Frame(self, bg='azure')
     f.pack(side=TOP)
 
-    Button(f, text='Start Computer Game', command=lambda: self.go_to_frame('CompStartPage')).pack(side=LEFT, padx=10)
+    Button(f, text='Start Computer Game', command=self.start_computer_game).pack(side=LEFT, padx=10)
     Button(f, text='Start Game on Computer', command=lambda: self.go_to_frame('NormalStartPage')).pack(side=LEFT, padx=10)
     Button(f, text='Start Game on LAN', command=lambda: self.go_to_frame('LANStartPage')).pack(side=LEFT, padx=10)
 
@@ -22,3 +22,9 @@ class EntryPage(Frame):
 
   def go_to_frame(self, frame):
     self.controller.show_frame(frame)
+
+  def start_computer_game(self):
+    self.controller.geometry("704x772")
+    self.controller.minsize(704, 772)
+    self.controller.show_frame('GamePage')
+

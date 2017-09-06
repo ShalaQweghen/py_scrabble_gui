@@ -1,8 +1,8 @@
-import threading
+import threading, re
 
 from tkinter import *
 
-from side_frame import SideFrame
+# from side_frame import SideFrame
 from tile import BoardTile, RackTile
 
 from lib.dic import Dict
@@ -30,6 +30,7 @@ class GamePage(Frame):
     self.empty_tiles = []
     self.gui_board = {}
     self.used_spots = {}
+    self.rack = []
 
     Frame.__init__(self, parent, bg='azure')
 
@@ -69,10 +70,10 @@ class GamePage(Frame):
     time.config(height=2, bg='dark gray', fg='white', padx=5)
     time.pack(side=LEFT, padx=13)
 
-    SideFrame(TOP, range(1, 16), out_f)
-    SideFrame(BOTTOM, range(1, 16), out_f)
-    SideFrame(LEFT, range(97, 112), out_f)
-    SideFrame(RIGHT, range(97, 112), out_f)
+    # SideFrame(TOP, range(1, 16), out_f)
+    # SideFrame(BOTTOM, range(1, 16), out_f)
+    # SideFrame(LEFT, range(97, 112), out_f)
+    # SideFrame(RIGHT, range(97, 112), out_f)
 
     board_f = Frame(out_f)
     board_f.pack()
@@ -98,6 +99,7 @@ class GamePage(Frame):
 
     for i in range(7):
       t = RackTile(rack, self.bag.draw())
+      self.rack.append(t)
       t.bind('<1>', self.place_tile)
 
   def draw_buttons(self):
@@ -106,7 +108,7 @@ class GamePage(Frame):
 
     self.sub = Button(button_f, text='Submit', command=self.construct_move)
     self.sub.pack(side=LEFT, padx=5)
-    self.pas = Button(button_f, text='Pass')
+    self.pas = Button(button_f, text='Pass', command=self.pass_popup)
     self.pas.pack(side=LEFT, padx=5)
     self.chal = Button(button_f, text='Challenge')
     self.chal.pack(side=LEFT, padx=5)
@@ -246,21 +248,24 @@ class GamePage(Frame):
       self.my_score += self.word.calculate_total_points()
       self.draw_letters()
 
-      self.sub.config(state=DISABLED)
-      self.pas.config(state=DISABLED)
-      self.chal.config(state=DISABLED)
+      self.wait_opponent()
 
-      for k, v in self.gui_board.items():
-        self.gui_board[k].active = False
+  def wait_opponent(self):
+    self.sub.config(state=DISABLED)
+    self.pas.config(state=DISABLED)
+    self.chal.config(state=DISABLED)
 
-      self.my_var.set('My Score = {}'.format(self.my_score))
-      self.bag_var.set('Tiles in Bag = {}'.format(len(self.bag.bag)))
+    for k, v in self.gui_board.items():
+      self.gui_board[k].active = False
 
-      self.status_var.set('... Opponent\'s Turn ...')
+    self.my_var.set('My Score = {}'.format(self.my_score))
+    self.bag_var.set('Tiles in Bag = {}'.format(len(self.bag.bag)))
 
-      self.thread = threading.Thread(target=self.get_ai_move, args=())
-      self.thread.start()
-      print(threading.active_count())
+    self.status_var.set('... Opponent\'s Turn ...')
+
+    self.thread = threading.Thread(target=self.get_ai_move, args=())
+    self.thread.start()
+    print(threading.active_count())
 
   def draw_letters(self):
     for tile in self.empty_tiles:
@@ -269,8 +274,8 @@ class GamePage(Frame):
     self.empty_tiles = []
 
   def add_letters_on_board(self, spot):
+    flag = True
     if self.direction == 'd':
-      flag = True
       bef = spot[0] + str(int(spot[1:]) + 1)
       aft = spot[0] + str(int(spot[1:]) - 1)
       check = [x[0] for x in self.aob_list if x[0] == aft or x[0] == bef]
@@ -284,7 +289,6 @@ class GamePage(Frame):
         else:
           flag = False
     else:
-      flag = True
       bef = chr(ord(spot[0]) - 1) + spot[1:]
       aft = chr(ord(spot[0]) + 1) + spot[1:]
       check = [x[0] for x in self.aob_list if x[0] == aft or x[0] == bef]
@@ -297,3 +301,41 @@ class GamePage(Frame):
           bef = chr(ord(bef[0]) - 1) + bef[1:]
         else:
           flag = False
+
+  def pass_popup(self):
+    w = Toplevel(self)
+
+    f = Frame(w)
+    f.pack(side=TOP)
+
+    Label(f, text='Enter letters to pass:').pack(side=LEFT)
+
+    e = Entry(f)
+    e.pack(side=LEFT)
+    e.focus()
+
+    bf = Frame(w)
+    bf.pack(side=BOTTOM)
+
+    Button(bf, text='Pass', command=lambda: self.pass_letters(e)).pack(side=LEFT)
+    Button(bf, text='Cancel', command=w.destroy).pack()
+
+    w.grab_set()
+    w.focus_set()
+    w.wait_window()
+
+  def pass_letters(self, entry):
+    passed_letters = list(re.sub('[^A-Z@]', '', entry.get().upper()))
+    self.bag.put_back(passed_letters)
+
+    for tile in self.rack:
+      if tile.var.get() in passed_letters:
+        del passed_letters[passed_letters.index(tile.var.get())]
+        tile.var.set(self.bag.draw())
+
+    entry.master.master.destroy()
+
+    self.wait_opponent()
+
+
+
