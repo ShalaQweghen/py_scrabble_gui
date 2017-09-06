@@ -1,8 +1,7 @@
 #! /usr/local/bin/python3
 
 from tkinter import *
-from start_page import NormalStartPage, LANStartPage
-from game_page import GamePage
+
 from entry_page import EntryPage
 
 class Root(Tk):
@@ -18,22 +17,8 @@ class Root(Tk):
     self.container.grid_columnconfigure(0, weight=1)
 
     self.draw_menu()
-    self.construct_frames()
 
-  def construct_frames(self):
-    self.frames = {}
-
-    for F in (EntryPage, NormalStartPage, LANStartPage, GamePage):
-      page_name = F.__name__
-      f = F(parent=self.container, controller=self)
-      self.frames[page_name] = f
-      f.grid(row=0, column=0, sticky=S+N+E+W)
-
-    self.show_frame('EntryPage')
-
-  def deconstruct_frames(self):
-    for k, v in self.frames.items():
-      v.destroy()
+    EntryPage(self.container)
 
   def draw_menu(self):
     top = Menu(self)
@@ -46,15 +31,8 @@ class Root(Tk):
 
     top.add_cascade(label='Game', menu=game_m, underline=0)
 
-  def show_frame(self, page_name):
-    f = self.frames[page_name]
-    f.tkraise()
-
   def go_to_beginning(self):
     self.geometry("704x420")
     self.minsize(704, 420)
-    self.deconstruct_frames()
-    self.construct_frames()
-
 
 Root().mainloop()

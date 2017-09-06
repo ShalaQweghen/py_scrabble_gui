@@ -1,10 +1,15 @@
+import random
+
 from tkinter import *
 
-class StartPage(Frame):
-  def __init__(self, parent, controller):
-    Frame.__init__(self, parent, bg='azure')
+from game_page import GamePage
 
-    self.controller = controller
+class StartPage(Frame):
+  def __init__(self, parent):
+    self.parent = parent
+
+    Frame.__init__(self, parent, bg='azure')
+    self.grid(row=0, column=0, sticky=S+N+E+W)
 
     self.chal_var = IntVar()
     self.time_var = IntVar()
@@ -12,7 +17,6 @@ class StartPage(Frame):
 
     self.but_var.set('Start Game')
 
-    self.options = {}
     self.players = []
 
     self.draw_heading()
@@ -86,9 +90,6 @@ class LANStartPage(StartPage):
     self.options['player_name'] = self.play_var.get()
     self.options['players'] = self.play_var.get()
     self.options['challenge_mode'] = bool(self.chal_var.get())
-    self.controller.geometry("704x772")
-    self.controller.minsize(704, 772)
-    self.controller.show_frame('GamePage')
 
 #############################################################################
 
@@ -111,38 +112,50 @@ class NormalStartPage(StartPage):
     self.play_var.set(2)
 
   def draw_name_fields(self):
-    self.controller.geometry("704x500")
+    self.parent.master.geometry("704x500")
+    self.parent.master.minsize(704, 500)
 
     t = LabelFrame(self, pady=10, padx=10, bg='azure')
     t.pack(pady=10)
 
     for p in range(1, self.play_var.get() + 1):
       var = StringVar()
+
       f = Frame(t, bg='azure')
       f.pack(side=TOP)
+
       Label(f, text='Enter Player {}\'s name:'.format(p), bg='azure').pack(side=LEFT)
+
       ent = Entry(f, textvariable=var)
       ent.pack(side=LEFT)
+
       self.players.append(ent)
 
   def get_player_names(self):
     names = []
+
     for name in self.players:
       names.append(name.get())
 
-    self.options['names'] = names
+    self.options = {'names': names}
+
+    random.shuffle(self.options['names'])
 
   def construct_options(self):
     if self.players:
       self.get_player_names()
+
       self.options['normal_mode'] = True
       self.options['time_limit'] = self.time_var.get()
       self.options['players'] = self.play_var.get()
-      self.options['names'] = self.players
       self.options['challenge_mode'] = bool(self.chal_var.get())
-      self.controller.geometry('704x772')
-      self.controller.minsize(704, 772)
-      self.controller.show_frame('GamePage')
+
+      self.parent.master.geometry('704x772')
+      self.parent.master.minsize(704, 772)
+
+      page = GamePage(self.parent, self.options)
+      page.tkraise()
+      print(self.options)
     else:
       self.draw_name_fields()
       self.but_var.set('Start Game')

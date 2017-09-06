@@ -1,11 +1,15 @@
 from tkinter import *
 
-class EntryPage(Frame):
-  def __init__(self, parent, controller):
-    Frame.__init__(self, parent, bg='azure')
+from game_page import GamePage
+from start_page import NormalStartPage, LANStartPage
 
-    self.controller = controller
-    controller.geometry("704x420")
+class EntryPage(Frame):
+  def __init__(self, parent):
+    self.parent = parent
+    Frame.__init__(self, parent, bg='azure')
+    self.grid(row=0, column=0, sticky=S+N+E+W)
+
+    self.parent.master.geometry("704x420")
     self.draw()
 
   def draw(self):
@@ -15,16 +19,23 @@ class EntryPage(Frame):
     f.pack(side=TOP)
 
     Button(f, text='Start Computer Game', command=self.start_computer_game).pack(side=LEFT, padx=10)
-    Button(f, text='Start Game on Computer', command=lambda: self.go_to_frame('NormalStartPage')).pack(side=LEFT, padx=10)
+    Button(f, text='Start Game on Computer', command=self.start_normal_game).pack(side=LEFT, padx=10)
     Button(f, text='Start Game on LAN', command=lambda: self.go_to_frame('LANStartPage')).pack(side=LEFT, padx=10)
 
     Button(self, text='Load Game').pack(side=TOP, pady=30)
 
-  def go_to_frame(self, frame):
-    self.controller.show_frame(frame)
 
   def start_computer_game(self):
-    self.controller.geometry("704x772")
-    self.controller.minsize(704, 772)
-    self.controller.show_frame('GamePage')
+    self.parent.master.geometry("704x772")
+    self.parent.master.minsize(704, 772)
+
+    page = GamePage(self.parent, {'comp_mode': True, 'names': ['Player'], 'players': 1})
+    page.tkraise()
+
+  def start_normal_game(self):
+    self.parent.master.geometry("704x420")
+    self.parent.master.minsize(704, 420)
+
+    page = NormalStartPage(self.parent)
+    page.tkraise()
 
