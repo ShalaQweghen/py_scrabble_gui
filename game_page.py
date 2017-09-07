@@ -18,6 +18,13 @@ class GamePage(Frame):
     self.board = Board()
 
     self.options = options
+    self.chal_mode = self.options.get('challenge_mode', False)
+    self.comp_mode = self.options.get('comp_mode', False)
+    self.norm_mode = self.options.get('normal_mode', False)
+    self.lan_mode = self.options.get('lan_mode', False)
+    self.time_limit = self.options.get('time_limit', 0)
+    self.players= self.options['names']
+    self.play_num = self.options['players']
 
     self.word = None
     self.start = None
@@ -38,12 +45,10 @@ class GamePage(Frame):
     Frame.__init__(self, parent, bg='azure')
     self.grid(row=0, column=0, sticky=S+N+E+W)
 
-    self.op_var = StringVar()
     self.bag_var = StringVar()
     self.time_var = StringVar()
     self.status_var = StringVar()
-    self.player_var = StringVar()
-    self.current_player = StringVar()
+    self.words_var = StringVar()
 
     self.time_var.set('Time: {} mins'.format(u'\u221e'))
 
@@ -52,26 +57,7 @@ class GamePage(Frame):
 
   def draw_board(self):
     out_f = Frame(self, padx=30, bg='azure')
-    out_f.pack()
-
-    infobar = Frame(out_f, pady=20, bg='azure')
-    infobar.pack(side=TOP, fill=X)
-
-    my_sc = Label(infobar, textvariable=self.player_var)
-    my_sc.config(height=2, fg='#004d00', bg='azure', padx=5, font=('times', 16, 'bold italic'))
-    my_sc.pack(side=LEFT, padx=13)
-
-    op_sc = Label(infobar, textvariable=self.op_var)
-    op_sc.config(height=2, fg='#992600', bg='azure', padx=5, font=('times', 16, 'bold italic'))
-    op_sc.pack(side=LEFT, padx=13)
-
-    bag = Label(infobar, textvariable=self.bag_var)
-    bag.config(height=2, fg='#595959', bg='azure', padx=5, font=('times', 16, 'bold italic'))
-    bag.pack(side=LEFT, padx=13)
-
-    time = Label(infobar, textvariable=self.time_var)
-    time.config(height=2, fg='#595959', bg='azure', padx=5, font=('times', 16, 'bold italic'))
-    time.pack(side=LEFT, padx=13)
+    out_f.pack(side=LEFT)
 
     # SideFrame(TOP, range(1, 16), out_f)
     # SideFrame(BOTTOM, range(1, 16), out_f)
@@ -79,7 +65,7 @@ class GamePage(Frame):
     # SideFrame(RIGHT, range(97, 112), out_f)
 
     board_f = Frame(out_f)
-    board_f.pack()
+    board_f.pack(side=TOP)
 
     row = 0
     row_n = 15
@@ -102,6 +88,66 @@ class GamePage(Frame):
       row += 1
       row_n -= 1
 
+    rack = Frame(out_f, pady=15, bg='azure')
+    rack.pack(side=TOP)
+
+    for i in range(7):
+      t = RackTile(rack)
+      t.bind('<1>', self.place_tile)
+      t['bg'] = '#BE975B'
+
+      if self.norm_mode:
+        t['fg'] = '#BE975B'
+
+      self.rack.append(t)
+
+    button_f = Frame(out_f, bg='azure')
+    button_f.pack(side=TOP)
+
+    self.sub = Button(button_f, text='Submit', bg='azure', command=self.process_word)
+    self.sub.pack(side=LEFT, padx=5)
+
+    self.pas = Button(button_f, text='Pass', bg='azure', command=self.pass_popup)
+    self.pas.pack(side=LEFT, padx=5)
+
+    if self.chal_mode:
+      self.chal = Button(button_f, bg='azure', text='Challenge', command=self.challenge)
+      self.chal.pack(side=LEFT, padx=5)
+
+    if self.norm_mode:
+      Button(button_f, text='Reveal', command=self.reveal).pack()
+
+  def draw_info_frame(self):
+    info_frame = LabelFrame(self, pady=5, padx=5, bg='azure')
+    info_frame.pack(side=LEFT)
+
+    if self.time_limit > 0:
+      Label(info_frame, textvariable=self.time_var, bg='azure').pack(side=TOP, anchor=NW)
+
+    Label(info_frame, textvariable=self.bag_var, bg='azure').pack(side=TOP, anchor=NW, pady=10)
+
+    self.pl1_var = StringVar()
+    self.pl1_var.set('{}\'s Score: {}'.format(self.players[0], 0))
+    Label(info_frame, textvariable=self.pl1_var, bg='azure').pack(side=TOP, anchor=NW)
+
+    self.pl2_var = StringVar()
+    self.pl2_var.set('{}\'s Score: {}'.format(self.players[1], 0))
+    Label(info_frame, textvariable=self.pl2_var, bg='azure').pack(side=TOP, anchor=NW)
+
+    if self.options['players'] == 3:
+      self.pl3_var = StringVar()
+      self.pl3_var.set('{}\'s Score: {}'.format(self.players[2], 0))
+      Label(info_frame, textvariable=self.pl3_var, bg='azure').pack(side=TOP, anchor=NW)
+
+    if self.options['players'] == 4:
+      self.pl4_var = StringVar()
+      self.pl4_var.set('{}\'s Score: {}'.format(self.players[3], 0))
+      Label(info_frame, textvariable=self.pl4_var, bg='azure').pack(side=TOP, anchor=NW)
+
+    Label(info_frame, text='Words', bg='azure').pack(side=TOP, anchor=NW, pady=10)
+
+    Label(info_frame, textvariable=self.words_var, bg='azure').pack(side=TOP, anchor=NW)
+
   def determine_background(self, t):
     if t.name in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
       t['bg'] = '#ff3300'
@@ -114,35 +160,13 @@ class GamePage(Frame):
     else:
       t['bg'] = '#ffd6cc'
 
-  def draw_rack(self):
-    rack = Frame(self, pady=15, bg='azure')
-    rack.pack()
-
-    for i in range(7):
-      t = RackTile(rack)
-      t.bind('<1>', self.place_tile)
-      t['bg'] = '#BE975B'
-
-      self.rack.append(t)
-
-  def draw_buttons(self):
-    button_f = Frame(self, bg='azure')
-    button_f.pack()
-
-    self.sub = Button(button_f, text='Submit', bg='azure', command=self.process_word)
-    self.sub.pack(side=LEFT, padx=5)
-
-    self.pas = Button(button_f, text='Pass', bg='azure', command=self.pass_popup)
-    self.pas.pack(side=LEFT, padx=5)
-
-    self.chal = Button(button_f, bg='azure', text='Challenge', command=self.challenge)
-    self.chal.pack(side=LEFT, padx=5)
+  def reveal(self):
+    for t in self.rack:
+      t['fg'] = 'black'
 
   def draw(self):
     self.draw_board()
-    self.draw_rack()
-    self.draw_buttons()
-
+    self.draw_info_frame()
     Label(self, textvariable=self.status_var, bg='azure', fg='#FF4500').pack()
 
   def place_tile(self, event):
@@ -229,7 +253,7 @@ class GamePage(Frame):
 
         del self.gui_board[s]
 
-    self.op_score += word.points
+    self.player_scores[1] += word.points
 
     self.board.place(word.word, word.range)
     self.opponent.update_rack(self.bag)
@@ -238,107 +262,114 @@ class GamePage(Frame):
   def normalize_board(self):
     self.sub.config(state=NORMAL)
     self.pas.config(state=NORMAL)
-    self.chal.config(state=NORMAL)
 
     for k, v in self.gui_board.items():
       self.gui_board[k].active = True
 
     self.status_var.set('')
     self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
-    self.op_var.set('Computer\'s Score: {}'.format(self.op_score))
+    self.pl2_var.set('Computer\'s Score: {}'.format(self.player_scores[1]))
 
 
   def process_word(self):
-    self.sorted_keys = sorted(self.letters)
+    if self.letters:
+      self.sorted_keys = sorted(self.letters)
 
-    raw_word = []
-    check1 = self.sorted_keys[0][0]
-    check2 = self.sorted_keys[-1][0]
+      raw_word = []
+      check1 = self.sorted_keys[0][0]
+      check2 = self.sorted_keys[-1][0]
 
-    if check1 == check2:
-      digits = sorted([int(x[1:]) for x in self.sorted_keys])
-      self.sorted_keys = [check1 + str(x) for x in digits]
-      self.sorted_keys.reverse()
+      if check1 == check2:
+        digits = sorted([int(x[1:]) for x in self.sorted_keys])
+        self.sorted_keys = [check1 + str(x) for x in digits]
+        self.sorted_keys.reverse()
 
-      self.direction = 'd'
-    else:
-      self.direction = 'r'
+        self.direction = 'd'
+      else:
+        self.direction = 'r'
 
-    self.aob_list = []
-
-    for key in self.sorted_keys:
-      raw_word.append(self.letters[key].var.get())
-      self.add_letters_on_board(key)
-
-    offset = 0
-    length = len(self.sorted_keys)
-
-    for spot, index, letter in self.aob_list:
-      if index < 0:
-        index = 0
-      elif index > length:
-        index = length - 1
-
-      raw_word.insert(index + offset, letter)
-      self.sorted_keys.insert(index + offset, spot)
-
-      offset += 1
-
-    self.word = Word(self.sorted_keys[0], self.direction, ''.join(raw_word), self.board, self.dict, self.options.get('challenge_mode', False))
-
-    if self.word.validate():
-      self.prev_word = []
+      self.aob_list = []
 
       for key in self.sorted_keys:
-        if key in self.letters:
-          self.letters[key].active = False
-          self.used_spots[key] = self.gui_board[key]
+        raw_word.append(self.letters[key].var.get())
+        self.add_letters_on_board(key)
 
-          del self.gui_board[key]
+      offset = 0
+      length = len(self.sorted_keys)
 
-      self.board.place(raw_word, self.sorted_keys)
+      for spot, index, letter in self.aob_list:
+        if index < 0:
+          index = 0
+        elif index > length:
+          index = length - 1
 
-      self.letters = {}
+        raw_word.insert(index + offset, letter)
+        self.sorted_keys.insert(index + offset, spot)
 
-      self.player_scores[self.cur_play_mark] += self.word.calculate_total_points()
+        offset += 1
 
-      self.prev_word.append(self.word.word)
-      self.prev_word.extend(self.word.extra_words)
+      self.word = Word(self.sorted_keys[0], self.direction, ''.join(raw_word), self.board, self.dict, self.chal_mode)
 
-      self.draw_letters()
-      self.update_racks()
+      if self.word.validate():
+        self.prev_word = []
 
-      self.start = None
-      self.old_letter_buffer = self.letter_buffer.copy()
-      self.letter_buffer = {}
+        for key in self.sorted_keys:
+          if key in self.letters:
+            self.letters[key].active = False
+            self.used_spots[key] = self.gui_board[key]
 
-      if self.options.get('normal_mode'):
-        self.switch_player()
-      else:
-        self.wait_comp()
+            del self.gui_board[key]
+
+        self.board.place(raw_word, self.sorted_keys)
+
+        self.letters = {}
+
+        self.player_scores[self.cur_play_mark] += self.word.calculate_total_points()
+
+        self.set_word_info()
+
+        self.prev_word.append(self.word.word)
+        self.prev_word.extend(self.word.extra_words)
+
+        self.draw_letters()
+        self.update_racks()
+
+        self.start = None
+        self.old_letter_buffer = self.letter_buffer.copy()
+        self.letter_buffer = {}
+
+        if self.norm_mode:
+          self.switch_player()
+        else:
+          self.wait_comp()
+
+  def set_word_info(self):
+    mes = ''
+
+    for word in self.word.words:
+      mes = mes + ('{} {}\n'.format(word, self.word.words[word]))
+
+    self.words_var.set(mes[:-1])
 
   def initialize_game(self):
+    if self.comp_mode:
+      self.opponent = AIOpponent()
+
     self.initialize_players()
 
-    if self.options.get('comp_mode', False):
-      self.bag_var.set('Tiles in Bag: 86')
-      self.op_var.set('Computer\'s Score: 0')
-
-      self.opponent = AIOpponent()
-      self.opponent.draw_letters(self.bag)
-
   def initialize_players(self):
-    self.current_player.set(self.options['names'][0].capitalize() + '\'s')
-
-    for i in range(self.options['players']):
+    for i in range(self.play_num):
       self.player_scores.append(0)
 
       rack = []
 
-      for i in range(7):
+      for j in range(7):
         rack.append(self.bag.draw())
 
       self.player_racks.append(rack)
+
+    if self.comp_mode:
+      self.opponent.letters = self.player_racks[1]
 
     self.switch_player()
 
@@ -348,14 +379,25 @@ class GamePage(Frame):
     for l, t in zip(rack, self.rack):
       t.var.set(l)
 
+      if self.norm_mode:
+        t['fg'] = '#BE975B'
+
   def update_racks(self):
     self.player_racks[self.cur_play_mark] = [x.var.get() for x in self.rack]
 
   def switch_player(self):
-    self.cur_play_mark = (self.cur_play_mark + 1) % self.options['players']
+    if self.norm_mode:
+      self.cur_play_mark = (self.cur_play_mark + 1) % self.play_num
 
-    self.current_player.set(self.options['names'][self.cur_play_mark].capitalize() + '\'s')
-    self.player_var.set('{} Score: {}'.format(self.current_player.get(), self.player_scores[self.cur_play_mark]))
+    self.pl1_var.set('{}\'s Score: {}'.format(self.players[0], self.player_scores[0]))
+    self.pl2_var.set('{}\'s Score: {}'.format(self.players[1], self.player_scores[1]))
+
+    if self.play_num == 3:
+      self.pl3_var.set('{}\'s Score: {}'.format(self.players[2], self.player_scores[2]))
+
+    if self.play_num == 4:
+      self.pl4_var.set('{}\'s Score: {}'.format(self.players[3], self.player_scores[3]))
+
     self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
 
     self.decorate_rack()
@@ -363,12 +405,11 @@ class GamePage(Frame):
   def wait_comp(self):
     self.sub.config(state=DISABLED)
     self.pas.config(state=DISABLED)
-    self.chal.config(state=DISABLED)
 
     for k, v in self.gui_board.items():
       self.gui_board[k].active = False
 
-    self.player_var.set('Player\'s Score: {}'.format(self.player_scores[self.cur_play_mark]))
+    self.pl1_var.set('Player\'s Score: {}'.format(self.player_scores[self.cur_play_mark]))
     self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
     self.status_var.set('... Computer\'s Turn ...')
 
@@ -455,13 +496,13 @@ class GamePage(Frame):
 
     entry.master.master.destroy()
 
-    if self.options.get('normal_mode', False):
+    if self.norm_mode:
       self.switch_player()
     else:
       self.wait_comp()
 
   def challenge(self):
-    if self.options.get('challenge_mode', False):
+    if self.chal_mode:
       for word in self.prev_word:
         if not self.dict.valid_word(word):
           self.player_scores[self.cur_play_mark - 1] -= self.word.points
@@ -483,7 +524,6 @@ class GamePage(Frame):
           self.old_letter_buffer = {}
           self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
 
-          break
+          return
 
-    self.prev_word = []
-    self.old_letter_buffer = {}
+      self.switch_player()

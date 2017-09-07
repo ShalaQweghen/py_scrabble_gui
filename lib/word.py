@@ -12,6 +12,7 @@ class Word:
     self.valid = False
     self.wild_tiles = []
     self.extra_words = []
+    self.words = {}
     self.invalid_word = False
     self.chal_mode = chal
 
@@ -194,5 +195,7 @@ class Word:
     if self.word_bonus:
       for s in w_range:
         word_points *= self.word_bonus.get(s, 1)
+
+    self.words[word] = word_points
 
     return word_points
