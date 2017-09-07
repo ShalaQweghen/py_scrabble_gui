@@ -139,9 +139,6 @@ class Game:
 
 			self.points = self.word.calculate_total_points()
 
-			if self.turns == 1:
-				self.points *= 2
-
 			self.board.place(self.word.word, self.word.range)
 			self.current_player.update_rack(self.bag)
 

@@ -63,6 +63,9 @@ class Board:
 				bonus['letter'][square] = 2
 			elif self.board[square] == '3l':
 				bonus['letter'][square] = 3
+			elif square == 'h8':
+				bonus['word'][square] = 2
+
 		return bonus
 
 	def valid_range(self, word_range, word, direction):
@@ -157,7 +160,7 @@ class Board:
 			if key in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
 				self.board[key] = '3w'
 
-			if key in 'b2 c3 d4 e5 b14 c13 d12 e11 n2 m3 l4 k5 n14 m13 l12 k11'.split():
+			if key in 'h8 b2 c3 d4 e5 b14 c13 d12 e11 n2 m3 l4 k5 n14 m13 l12 k11'.split():
 				self.board[key] = '2w'
 
 			if key in 'b6 b10 n6 n10 f2 f6 f10 f14 j2 j6 j10 j14'.split():

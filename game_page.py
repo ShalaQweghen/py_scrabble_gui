@@ -41,7 +41,7 @@ class GamePage(Frame):
     self.player_var = StringVar()
     self.current_player = StringVar()
 
-    self.time_var.set('Time Left = {} mins'.format(u'\u221e'))
+    self.time_var.set('Time: {} mins'.format(u'\u221e'))
 
     self.draw()
     self.initialize_game()
@@ -54,19 +54,19 @@ class GamePage(Frame):
     infobar.pack(side=TOP, fill=X)
 
     my_sc = Label(infobar, textvariable=self.player_var)
-    my_sc.config(height=2, bg='#ADFF2F', fg='#1a1a1a', padx=5)
+    my_sc.config(height=2, fg='#004d00', bg='azure', padx=5, font=('times', 16, 'bold italic'))
     my_sc.pack(side=LEFT, padx=13)
 
     op_sc = Label(infobar, textvariable=self.op_var)
-    op_sc.config(height=2, fg='#1a1a1a', bg='#FF4500', padx=5)
+    op_sc.config(height=2, fg='#992600', bg='azure', padx=5, font=('times', 16, 'bold italic'))
     op_sc.pack(side=LEFT, padx=13)
 
     bag = Label(infobar, textvariable=self.bag_var)
-    bag.config(height=2, bg='dark gray', fg='white', padx=5)
+    bag.config(height=2, fg='#595959', bg='azure', padx=5, font=('times', 16, 'bold italic'))
     bag.pack(side=LEFT, padx=13)
 
     time = Label(infobar, textvariable=self.time_var)
-    time.config(height=2, bg='dark gray', fg='white', padx=5)
+    time.config(height=2, fg='#595959', bg='azure', padx=5, font=('times', 16, 'bold italic'))
     time.pack(side=LEFT, padx=13)
 
     # SideFrame(TOP, range(1, 16), out_f)
@@ -88,6 +88,7 @@ class GamePage(Frame):
         t = BoardTile(row, col, board_f)
         t.bind('<1>', self.place_tile)
         t.name = col_n + str(row_n)
+        self.determine_background(t)
 
         self.gui_board[t.name] = t
 
@@ -97,6 +98,18 @@ class GamePage(Frame):
       row += 1
       row_n -= 1
 
+  def determine_background(self, t):
+    if t.name in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
+      t['bg'] = '#ff3300'
+    elif t.name in 'h8 b2 c3 d4 e5 b14 c13 d12 e11 n2 m3 l4 k5 n14 m13 l12 k11'.split():
+      t['bg'] = '#ff99cc'
+    elif t.name in 'b6 b10 n6 n10 f2 f6 f10 f14 j2 j6 j10 j14'.split():
+      t['bg'] = '#3366ff'
+    elif t.name in 'a4 a12 c7 c9 d1 d8 d15 g3 g7 g9 g13 h4 h12 o4 o12 m7 m9 l1 l8 l15 i3 i7 i9 i13'.split():
+      t['bg'] = '#b3c6ff'
+    else:
+      t['bg'] = '#ffd6cc'
+
   def draw_rack(self):
     rack = Frame(self, pady=15, bg='azure')
     rack.pack()
@@ -104,6 +117,7 @@ class GamePage(Frame):
     for i in range(7):
       t = RackTile(rack)
       t.bind('<1>', self.place_tile)
+      t['bg'] = '#BE975B'
 
       self.rack.append(t)
 
@@ -111,13 +125,13 @@ class GamePage(Frame):
     button_f = Frame(self, bg='azure')
     button_f.pack()
 
-    self.sub = Button(button_f, text='Submit', command=self.process_word)
+    self.sub = Button(button_f, text='Submit', bg='azure', command=self.process_word)
     self.sub.pack(side=LEFT, padx=5)
 
-    self.pas = Button(button_f, text='Pass', command=self.pass_popup)
+    self.pas = Button(button_f, text='Pass', bg='azure', command=self.pass_popup)
     self.pas.pack(side=LEFT, padx=5)
 
-    self.chal = Button(button_f, text='Challenge')
+    self.chal = Button(button_f, bg='azure', text='Challenge')
     self.chal.pack(side=LEFT, padx=5)
 
   def draw(self):
@@ -136,8 +150,12 @@ class GamePage(Frame):
       if widget_name == 'BoardTile' and event.widget.active:
         if widget_var.get() == '':
           widget_var.set(self.start.var.get())
+          event.widget['bg'] = self.start['bg']
+
           self.letters[event.widget.name] = event.widget
           self.empty_tiles.append(self.start)
+
+          self.start['bg'] = '#cccccc'
           self.start.var.set('')
           self.start = None
       elif widget_name == 'RackTile':
@@ -145,8 +163,12 @@ class GamePage(Frame):
         widget_var.set(self.start.var.get())
 
         if event.widget in self.empty_tiles:
-          del self.empty_tiles[self.empty_tiles.index(event.widget)]
           self.empty_tiles.append(self.start)
+
+          del self.empty_tiles[self.empty_tiles.index(event.widget)]
+
+          event.widget['bg'] = '#BE975B'
+          self.start['bg'] = '#cccccc'
 
         self.start.var.set(temp)
         self.start = None
@@ -154,16 +176,27 @@ class GamePage(Frame):
         self.start = None
     elif start_name == 'BoardTile' and self.start.var.get() != '' and self.start.active:
       if widget_name == 'RackTile' and widget_var.get() == '':
-        widget_var.set(self.start.var.get())
         del self.letters[self.start.name]
         del self.empty_tiles[self.empty_tiles.index(event.widget)]
+
+        widget_var.set(self.start.var.get())
+        event.widget['bg'] = '#BE975B'
+
+        self.determine_background(self.start)
+
         self.start.var.set('')
         self.start = None
       elif widget_name == 'BoardTile' and event.widget.active:
         if widget_var.get() == '':
           widget_var.set(self.start.var.get())
+          event.widget['bg'] = self.start['bg']
+
+          self.determine_background(self.start)
+
           del self.letters[self.start.name]
+
           self.letters[event.widget.name] = event.widget
+
           self.start.var.set('')
           self.start = None
         elif widget_var.get() == self.start.var.get():
@@ -172,6 +205,7 @@ class GamePage(Frame):
           temp = widget_var.get()
           widget_var.set(self.start.var.get())
           self.start.var.set(temp)
+
           self.letters[self.start.name] = self.start
           self.letters[event.widget.name] = event.widget
           self.start = None
@@ -184,6 +218,7 @@ class GamePage(Frame):
     for s, l in zip(word.range, word.word):
       if self.gui_board.get(s, False):
         self.gui_board[s].var.set(l)
+        self.gui_board[s]['bg'] = '#BE975B'
         self.gui_board[s].active = False
 
         self.used_spots[s] = self.gui_board[s]
@@ -205,8 +240,8 @@ class GamePage(Frame):
       self.gui_board[k].active = True
 
     self.status_var.set('')
-    self.bag_var.set('Tiles in Bag = {}'.format(len(self.bag.bag)))
-    self.op_var.set('Opponent\'s Score = {}'.format(self.op_score))
+    self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
+    self.op_var.set('Computer\'s Score: {}'.format(self.op_score))
 
 
   def process_word(self):
@@ -272,8 +307,8 @@ class GamePage(Frame):
     self.initialize_players()
 
     if self.options.get('comp_mode', False):
-      self.bag_var.set('Tiles in Bag = 86')
-      self.op_var.set('Opponent\'s Score = 0')
+      self.bag_var.set('Tiles in Bag: 86')
+      self.op_var.set('Computer\'s Score: 0')
 
       self.opponent = AIOpponent()
       self.opponent.draw_letters(self.bag)
@@ -306,8 +341,8 @@ class GamePage(Frame):
     self.cur_play_mark = (self.cur_play_mark + 1) % self.options['players']
 
     self.current_player.set(self.options['names'][self.cur_play_mark].capitalize() + '\'s')
-    self.player_var.set('{} Score = {}'.format(self.current_player.get(), self.player_scores[self.cur_play_mark]))
-    self.bag_var.set('Tiles in Bag = {}'.format(len(self.bag.bag)))
+    self.player_var.set('{} Score: {}'.format(self.current_player.get(), self.player_scores[self.cur_play_mark]))
+    self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
 
     self.decorate_rack()
 
@@ -319,9 +354,9 @@ class GamePage(Frame):
     for k, v in self.gui_board.items():
       self.gui_board[k].active = False
 
-    self.player_var.set('Player\'s Score = {}'.format(self.player_scores[self.cur_play_mark]))
-    self.bag_var.set('Tiles in Bag = {}'.format(len(self.bag.bag)))
-    self.status_var.set('... Opponent\'s Turn ...')
+    self.player_var.set('Player\'s Score: {}'.format(self.player_scores[self.cur_play_mark]))
+    self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
+    self.status_var.set('... Computer\'s Turn ...')
 
     self.thread = threading.Thread(target=self.get_ai_move, args=())
     self.thread.start()
@@ -329,6 +364,7 @@ class GamePage(Frame):
   def draw_letters(self):
     for tile in self.empty_tiles:
       tile.var.set(self.bag.draw())
+      tile['bg'] = '#BE975B'
 
     self.empty_tiles = []
 
@@ -369,6 +405,10 @@ class GamePage(Frame):
 
     f = Frame(w)
     f.pack(side=TOP)
+
+    self.master.master.update()
+    x = self.master.master.winfo_rootx() + 200
+    w.geometry("+{}+{}".format(x, 300))
 
     Label(f, text='Enter letters to pass:').pack(side=LEFT)
 
