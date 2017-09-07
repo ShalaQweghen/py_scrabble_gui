@@ -1,7 +1,7 @@
 import re
 
 class Word:
-  def __init__(self, start, direction, word, board, dic):
+  def __init__(self, start, direction, word, board, dic, chal=False):
     self.start = start
     self.dict = dic
     self.direction = direction
@@ -13,6 +13,7 @@ class Word:
     self.wild_tiles = []
     self.extra_words = []
     self.invalid_word = False
+    self.chal_mode = chal
 
     self.range = self._set_range()
     self.aob_list = self._set_aob_list()
@@ -33,7 +34,7 @@ class Word:
       else:
         self.extra_words.append(self._set_extra_word(square, extra_word))
 
-        if self.dict.valid_word(self.extra_words[-1][0]):
+        if self.chal_mode or self.dict.valid_word(self.extra_words[-1][0]):
           check_list.append(True)
         else:
           self.invalid_word = self.extra_words[-1][0]
@@ -85,10 +86,11 @@ class Word:
         self.error_message = 'Move was illegal...'
         return False
 
-      if not self.dict.valid_word(self.word):
-        self.error_message = '{} is not in dictionary...'.format(self.word)
-        self.invalid_word = True
-        return False
+      if not self.chal_mode:
+        if not self.dict.valid_word(self.word):
+          self.error_message = '{} is not in dictionary...'.format(self.word)
+          self.invalid_word = True
+          return False
 
       if not self.process_extra_words():
         self.error_message = '{} is not in the dictionary...'.format(self.invalid_word)

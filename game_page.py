@@ -26,8 +26,12 @@ class GamePage(Frame):
     self.letters = {}
     self.gui_board = {}
     self.used_spots = {}
+    self.letter_buffer = {}
+    self.old_letter_buffer = {}
     self.rack = []
+    self.prev_word = []
     self.empty_tiles = []
+    self.new_letters = []
     self.player_racks = []
     self.player_scores = []
 
@@ -131,7 +135,7 @@ class GamePage(Frame):
     self.pas = Button(button_f, text='Pass', bg='azure', command=self.pass_popup)
     self.pas.pack(side=LEFT, padx=5)
 
-    self.chal = Button(button_f, bg='azure', text='Challenge')
+    self.chal = Button(button_f, bg='azure', text='Challenge', command=self.challenge)
     self.chal.pack(side=LEFT, padx=5)
 
   def draw(self):
@@ -153,6 +157,7 @@ class GamePage(Frame):
           event.widget['bg'] = self.start['bg']
 
           self.letters[event.widget.name] = event.widget
+          self.letter_buffer[self.start] = event.widget
           self.empty_tiles.append(self.start)
 
           self.start['bg'] = '#cccccc'
@@ -164,7 +169,6 @@ class GamePage(Frame):
 
         if event.widget in self.empty_tiles:
           self.empty_tiles.append(self.start)
-
           del self.empty_tiles[self.empty_tiles.index(event.widget)]
 
           event.widget['bg'] = '#BE975B'
@@ -280,9 +284,11 @@ class GamePage(Frame):
 
       offset += 1
 
-    self.word = Word(self.sorted_keys[0], self.direction, ''.join(raw_word), self.board, self.dict)
+    self.word = Word(self.sorted_keys[0], self.direction, ''.join(raw_word), self.board, self.dict, self.options.get('challenge_mode', False))
 
     if self.word.validate():
+      self.prev_word = []
+
       for key in self.sorted_keys:
         if key in self.letters:
           self.letters[key].active = False
@@ -293,10 +299,18 @@ class GamePage(Frame):
       self.board.place(raw_word, self.sorted_keys)
 
       self.letters = {}
+
       self.player_scores[self.cur_play_mark] += self.word.calculate_total_points()
+
+      self.prev_word.append(self.word.word)
+      self.prev_word.extend(self.word.extra_words)
 
       self.draw_letters()
       self.update_racks()
+
+      self.start = None
+      self.old_letter_buffer = self.letter_buffer.copy()
+      self.letter_buffer = {}
 
       if self.options.get('normal_mode'):
         self.switch_player()
@@ -362,9 +376,13 @@ class GamePage(Frame):
     self.thread.start()
 
   def draw_letters(self):
+    self.new_letters = []
+
     for tile in self.empty_tiles:
       tile.var.set(self.bag.draw())
       tile['bg'] = '#BE975B'
+
+      self.new_letters.append(tile.var.get())
 
     self.empty_tiles = []
 
@@ -441,3 +459,31 @@ class GamePage(Frame):
       self.switch_player()
     else:
       self.wait_comp()
+
+  def challenge(self):
+    if self.options.get('challenge_mode', False):
+      for word in self.prev_word:
+        if not self.dict.valid_word(word):
+          self.player_scores[self.cur_play_mark - 1] -= self.word.points
+
+          for new in self.new_letters:
+            self.player_racks[self.cur_play_mark - 1].remove(new)
+            self.bag.put_back([new])
+
+          for old, new in self.old_letter_buffer.items():
+            self.player_racks[self.cur_play_mark -1].append(new.var.get())
+            self.board.board[new.name] = ' '
+            new.var.set('')
+            new.active = True
+            self.determine_background(new)
+            del self.used_spots[new.name]
+            self.gui_board[new.name] = new
+
+          self.prev_word = []
+          self.old_letter_buffer = {}
+          self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
+
+          break
+
+    self.prev_word = []
+    self.old_letter_buffer = {}
