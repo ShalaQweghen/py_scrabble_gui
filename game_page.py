@@ -37,7 +37,7 @@ class GamePage(Frame):
     self.used_spots = {}
     self.rack = []
     self.raw_word = []
-    self.prev_word = []
+    self.prev_words = []
     self.empty_tiles = []
     self.new_letters = []
     self.player_racks = []
@@ -452,11 +452,11 @@ class GamePage(Frame):
       self.word = Word(self.sorted_keys[0], self.direction, self.raw_word, self.board, self.dict, self.chal_mode)
 
       if not self.valid_sorted_letters():
-        self.cancel_move()
+        self.not_proceed = True
 
       if not self.not_proceed and self.word.validate():
         self.wild_tile = None
-        self.prev_word = []
+        self.prev_words = []
 
         for key in self.sorted_keys:
           if key in self.letters:
@@ -473,8 +473,8 @@ class GamePage(Frame):
 
         self.set_word_info()
 
-        self.prev_word.append(self.word.word)
-        self.prev_word.extend([x[0] for x in self.word.extra_words])
+        self.prev_words.append(self.word.word)
+        self.prev_words.extend([x[0] for x in self.word.extra_words])
 
         self.draw_letters()
         self.update_racks()
@@ -522,19 +522,29 @@ class GamePage(Frame):
 
   def valid_sorted_letters(self):
     if self.direction == 'd':
-      check = self.sorted_keys[0][0]
-
-      for key in self.sorted_keys:
-        if key[0] != check:
-          return False
-    else:
-      check = int(self.sorted_keys[0][1:])
+      check1 = int(self.sorted_keys[0][1:])
+      check2 = self.sorted_keys[0][0]
 
       for key in self.sorted_keys[1:]:
-        if int(key[1:]) != check - 1:
+        if int(key[1:]) != check1 - 1:
           return False
 
-        check -= 1
+        if key[0] != check2:
+          return False
+
+        check1 -= 1
+    else:
+      check1 = ord(self.sorted_keys[0][0])
+      check2 = self.sorted_keys[0][1:]
+
+      for key in self.sorted_keys[1:]:
+        if ord(key[0]) != check1 + 1:
+          return False
+
+        if key[1:] != check2:
+          return False
+
+        check1 += 1
 
     return True
 
@@ -618,8 +628,8 @@ class GamePage(Frame):
 
   def challenge(self):
     if self.chal_mode:
-      print(self.prev_word)
-      for word in self.prev_word:
+      print(self.prev_words)
+      for word in self.prev_words:
         if not self.dict.valid_word(word):
           self.player_scores[self.cur_play_mark - 1] -= self.word.points
 
@@ -644,7 +654,7 @@ class GamePage(Frame):
 
               self.gui_board[tile.name] = tile
 
-          self.prev_word = []
+          self.prev_words = []
           self.old_letter_buffer = []
 
           self.update_info()
