@@ -26,8 +26,8 @@ class EntryPage(Frame):
 
 
   def start_computer_game(self):
-    self.parent.master.geometry("780x785")
-    self.parent.master.minsize(780, 785)
+    self.parent.master.geometry("750x785")
+    self.parent.master.minsize(750, 785)
 
     page = GamePage(self.parent, {'comp_mode': True, 'names': ['Player', 'Computer'], 'players': 2})
     page.tkraise()

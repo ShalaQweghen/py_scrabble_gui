@@ -11,9 +11,8 @@ class Root(Tk):
     self.config(bg='azure')
     self.iconbitmap('./pics/pyscrabble.ico')
 
-    w = 704
     ws = self.winfo_screenwidth()
-    x = int((ws/2) - (w/2))
+    x = int((ws/2) - (704/2))
 
     self.geometry("704x420+{}+{}".format(x, 0))
     self.minsize(704, 420)

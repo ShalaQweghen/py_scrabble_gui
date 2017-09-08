@@ -135,7 +135,7 @@ class NormalStartPage(StartPage):
     names = []
 
     for name in self.players:
-      names.append(name.get())
+      names.append(name.get().strip().capitalize())
 
     self.options = {'names': names}
 
@@ -150,8 +150,8 @@ class NormalStartPage(StartPage):
       self.options['players'] = self.play_var.get()
       self.options['challenge_mode'] = bool(self.chal_var.get())
 
-      self.parent.master.geometry('770x785')
-      self.parent.master.minsize(770, 785)
+      self.parent.master.geometry('750x785')
+      self.parent.master.minsize(750, 785)
 
       page = GamePage(self.parent, self.options)
       page.tkraise()
