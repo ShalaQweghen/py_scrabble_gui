@@ -28,19 +28,22 @@ class GamePage(Frame):
 
     self.word = None
     self.start = None
+    self.wild_tile = None
+    self.not_proceed = False
     self.op_score = 0
     self.cur_play_mark = 0
     self.letters = {}
     self.gui_board = {}
     self.used_spots = {}
-    self.letter_buffer = []
-    self.old_letter_buffer = []
     self.rack = []
+    self.raw_word = []
     self.prev_word = []
     self.empty_tiles = []
     self.new_letters = []
     self.player_racks = []
     self.player_scores = []
+    self.letter_buffer = []
+    self.old_letter_buffer = []
 
     Frame.__init__(self, parent, bg='azure')
     self.grid(row=0, column=0, sticky=S+N+E+W)
@@ -327,7 +330,7 @@ class GamePage(Frame):
 
     for l, t in zip(rack, self.rack):
       if l == '@':
-        t.var.set('')
+        t.var.set(' ')
       else:
         t.var.set(l)
 
@@ -408,7 +411,7 @@ class GamePage(Frame):
     if self.letters:
       self.sorted_keys = sorted(self.letters)
 
-      raw_word = []
+      self.raw_word = []
       check1 = self.sorted_keys[0][0]
       check2 = self.sorted_keys[-1][0]
 
@@ -424,7 +427,7 @@ class GamePage(Frame):
       self.aob_list = []
 
       for key in self.sorted_keys:
-        raw_word.append(self.letters[key].var.get())
+        self.raw_word.append(self.letters[key].var.get())
         self.add_letters_on_board(key)
 
       offset = 0
@@ -436,14 +439,23 @@ class GamePage(Frame):
         elif index > length:
           index = length - 1
 
-        raw_word.insert(index + offset, letter)
+        self.raw_word.insert(index + offset, letter)
         self.sorted_keys.insert(index + offset, spot)
 
         offset += 1
 
-      self.word = Word(self.sorted_keys[0], self.direction, ''.join(raw_word), self.board, self.dict, self.chal_mode)
+      self.raw_word = ''.join(self.raw_word)
 
-      if self.word.validate():
+      if ' ' in self.raw_word:
+        self.wild_tile_popup()
+
+      self.word = Word(self.sorted_keys[0], self.direction, self.raw_word, self.board, self.dict, self.chal_mode)
+
+      if not self.valid_sorted_letters():
+        self.cancel_move()
+
+      if not self.not_proceed and self.word.validate():
+        self.wild_tile = None
         self.prev_word = []
 
         for key in self.sorted_keys:
@@ -453,7 +465,7 @@ class GamePage(Frame):
 
             del self.gui_board[key]
 
-        self.board.place(raw_word, self.sorted_keys)
+        self.board.place(self.raw_word, self.sorted_keys)
 
         self.letters = {}
 
@@ -475,6 +487,86 @@ class GamePage(Frame):
           self.switch_player()
         else:
           self.wait_comp()
+      else:
+        if self.wild_tile:
+          self.wild_tile.var.set(' ')
+          self.wild_tile = None
+
+        self.not_proceed = False
+
+  def wild_tile_popup(self):
+    w = Toplevel(self)
+
+    f = Frame(w)
+    f.pack(side=TOP)
+
+    self.master.master.update()
+    x = self.master.master.winfo_rootx() + 200
+    w.geometry("+{}+{}".format(x, 300))
+
+    Label(f, text='Enter a Letter:').pack(side=LEFT)
+
+    e = Entry(f, width=2)
+    e.pack(side=LEFT)
+    e.focus()
+
+    bf = Frame(w)
+    bf.pack(side=BOTTOM)
+
+    Button(bf, text='Submit', command=lambda: self.change_wild_tile(e)).pack(side=LEFT)
+    Button(bf, text='Cancel', command=lambda: self.cancel_wild_tile_popup(w)).pack()
+
+    w.grab_set()
+    w.focus_set()
+    w.wait_window()
+
+  def valid_sorted_letters(self):
+    if self.direction == 'd':
+      check = self.sorted_keys[0][0]
+
+      for key in self.sorted_keys:
+        if key[0] != check:
+          return False
+    else:
+      check = int(self.sorted_keys[0][1:])
+
+      for key in self.sorted_keys[1:]:
+        if int(key[1:]) != check - 1:
+          return False
+
+        check -= 1
+
+    return True
+
+  def cancel_move(self):
+    for t1, t2 in zip(self.empty_tiles, self.letters.values()):
+      t1.var.set(t2.var.get())
+      t2.var.set('')
+      t1['bg'] = '#BE975B'
+      self.determine_background(t2)
+
+    self.letters = {}
+    self.not_proceed = True
+
+  def cancel_wild_tile_popup(self, popup):
+    popup.destroy()
+    self.cancel_move()
+
+  def change_wild_tile(self, ent):
+    self.raw_word = re.sub(' ', ent.get().upper(), self.raw_word)
+
+    for tile in self.letters:
+      if self.letters[tile].var.get() == ' ':
+        self.wild_tile = self.letters[tile]
+
+        if self.chal_mode:
+          self.wild_tile_clone = self.wild_tile
+
+        self.board.wild_tiles_on_board.append(self.wild_tile.name)
+
+        self.letters[tile].var.set(ent.get().upper())
+
+    ent.master.master.destroy()
 
   def add_letters_on_board(self, spot):
     flag = True
@@ -535,10 +627,12 @@ class GamePage(Frame):
             self.player_racks[self.cur_play_mark - 1].remove(new)
             self.bag.put_back([new])
 
-          print(self.used_spots)
-          print(self.old_letter_buffer)
           for tile in self.old_letter_buffer:
             if tile.name in self.used_spots:
+              if tile is self.wild_tile_clone:
+                self.board.wild_tiles_on_board.remove(tile.name)
+                tile.var.set(' ')
+
               self.player_racks[self.cur_play_mark -1].append(tile.var.get())
               self.board.board[tile.name] = ' '
 
