@@ -397,11 +397,9 @@ class GamePage(Frame):
     for k, v in self.gui_board.items():
       self.gui_board[k].active = False
 
-    self.update_info()
-
-    # self.pl1_var.set('Player: {}'.format(self.player_scores[self.cur_play_mark]))
-    # self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
-    # self.status_var.set('... Computer\'s Turn ...')
+    self.pl1_var.set('Player: {}'.format(self.player_scores[self.cur_play_mark]))
+    self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
+    self.status_var.set('... Computer\'s Turn ...')
 
     self.thread = threading.Thread(target=self.get_ai_move, args=())
     self.thread.start()
