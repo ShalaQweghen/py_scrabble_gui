@@ -204,6 +204,9 @@ class GamePage(Frame):
     for word in self.word.words:
       mes = mes + ('{} {}\n'.format(word, self.word.words[word]))
 
+    if len(self.empty_tiles) == 7:
+      mes = mes + ('\nBonus 60')
+
     self.words_var.set(mes[:-1])
 
   def normalize_board(self):
@@ -465,11 +468,14 @@ class GamePage(Frame):
 
             del self.gui_board[key]
 
-        self.board.place(self.raw_word, self.sorted_keys)
-
         self.letters = {}
 
         self.player_scores[self.cur_play_mark] += self.word.calculate_total_points()
+
+        if len(self.empty_tiles) == 7:
+          self.player_scores[self.cur_play_mark] += 60
+
+        self.board.place(self.raw_word, self.sorted_keys)
 
         self.set_word_info()
 
@@ -628,10 +634,12 @@ class GamePage(Frame):
 
   def challenge(self):
     if self.chal_mode:
-      print(self.prev_words)
       for word in self.prev_words:
         if not self.dict.valid_word(word):
           self.player_scores[self.cur_play_mark - 1] -= self.word.points
+
+          if len(self.new_letters) == 7:
+            self.player_scores[self.cur_play_mark - 1] -= 60
 
           for new in self.new_letters:
             self.player_racks[self.cur_play_mark - 1].remove(new)
