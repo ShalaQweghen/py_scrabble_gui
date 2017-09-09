@@ -29,6 +29,7 @@ class GamePage(Frame):
     self.word = None
     self.start = None
     self.wild_tile = None
+    self.over = False
     self.not_proceed = False
     self.op_score = 0
     self.cur_play_mark = 0
@@ -53,7 +54,9 @@ class GamePage(Frame):
     self.status_var = StringVar()
     self.words_var = StringVar()
 
-    self.time_var.set('Time: {} mins'.format(u'\u221e'))
+    if self.time_limit:
+      self.seconds = 0
+      self.minutes = self.time_limit
 
     self.draw()
     self.initialize_game()
@@ -128,8 +131,8 @@ class GamePage(Frame):
 
     options = {'font': ('times', 15, 'italic'), 'bg': 'azure', 'fg': '#004d00'}
 
-    if self.time_limit > 0:
-      Label(info_frame, textvariable=self.time_var, **options).pack(side=TOP, anchor=NW)
+    if self.time_limit:
+      Label(info_frame, textvariable=self.time_var, font=('times', 15, 'italic'), bg='#004d00', fg='azure').pack(side=TOP, anchor=NW)
 
     Label(info_frame, textvariable=self.bag_var, **options).pack(side=TOP, anchor=NW, pady=10)
 
@@ -217,7 +220,7 @@ class GamePage(Frame):
       self.gui_board[k].active = True
 
     self.status_var.set('... Player\'s Turn ...')
-    self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
+    self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
     self.pl2_var.set('Computer: {}'.format(self.player_scores[1]))
 
   def reveal(self):
@@ -310,6 +313,10 @@ class GamePage(Frame):
     if self.comp_mode:
       self.opponent = AIOpponent()
 
+    if self.time_limit:
+      print(1)
+      self.countdown()
+
     self.initialize_players()
 
   def initialize_players(self):
@@ -362,7 +369,7 @@ class GamePage(Frame):
     if self.play_num == 4:
       self.pl4_var.set('{}: {}'.format(self.players[3], self.player_scores[3]))
 
-    self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
+    self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
 
   def draw_letters(self):
     self.new_letters = []
@@ -404,7 +411,7 @@ class GamePage(Frame):
       self.gui_board[k].active = False
 
     self.pl1_var.set('Player: {}'.format(self.player_scores[self.cur_play_mark]))
-    self.bag_var.set('Tiles in Bag: {}'.format(len(self.bag.bag)))
+    self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
     self.status_var.set('... Computer\'s Turn ...')
 
     self.thread = threading.Thread(target=self.get_ai_move, args=())
@@ -499,6 +506,24 @@ class GamePage(Frame):
           self.wild_tile = None
 
         self.not_proceed = False
+
+  def countdown(self):
+    if self.seconds == 0:
+      self.seconds = 59
+      self.minutes -= 1
+    else:
+      self.seconds -= 1
+
+    if self.seconds >= 0 and self.minutes >= 0:
+      if self.seconds > 9:
+        seconds = str(self.seconds)
+      else:
+        seconds = '0' + str(self.seconds)
+
+      self.time_var.set('{}:{} Left'.format(self.minutes, seconds))
+      self.master.master.after(1000, self.countdown)
+    else:
+      self.over = True
 
   def wild_tile_popup(self):
     w = Toplevel(self)
