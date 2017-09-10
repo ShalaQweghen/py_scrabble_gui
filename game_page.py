@@ -1,8 +1,9 @@
-import threading, re
+import threading, re, os, pickle
 
 from tkinter import *
+from tkinter.simpledialog import askstring
+from tkinter.filedialog import asksaveasfilename
 
-# from side_frame import SideFrame
 from tile import BoardTile, RackTile
 
 from lib.dic import Dict
@@ -12,8 +13,8 @@ from lib.board import Board
 from lib.comp import AIOpponent
 
 class GamePage(Frame):
-  def __init__(self, parent, options):
-    self.dict = Dict('./dics/sowpods.txt')
+  def __init__(self, parent, options, dic='./dics/sowpods.txt'):
+    self.dict = Dict(dic)
     self.bag = Bag()
     self.board = Board()
 
@@ -23,15 +24,22 @@ class GamePage(Frame):
     self.norm_mode = self.options.get('normal_mode', False)
     self.lan_mode = self.options.get('lan_mode', False)
     self.time_limit = self.options.get('time_limit', 0)
-    self.players= self.options['names']
-    self.play_num = self.options['players']
+    self.point_limit = self.options.get('point_limit', 0)
+    self.players = self.options.get('names', [])
+    self.play_num = self.options.get('players', 0)
+    self.loading = self.options.get('loading', False)
+
+    self.minutes = self.time_limit
 
     self.word = None
     self.start = None
     self.wild_tile = None
     self.over = False
+    self.time_up = False
     self.not_proceed = False
+    self.seconds = 0
     self.op_score = 0
+    self.pass_num = 0
     self.cur_play_mark = 0
     self.letters = {}
     self.gui_board = {}
@@ -54,23 +62,15 @@ class GamePage(Frame):
     self.status_var = StringVar()
     self.words_var = StringVar()
 
-    if self.time_limit:
-      self.seconds = 0
-      self.minutes = self.time_limit
-
-    self.draw()
+    self.draw_main_frame()
+    self.draw_info_frame()
     self.initialize_game()
 
-  def draw_board(self):
+  def draw_main_frame(self):
     out_f = Frame(self, padx=30, bg='azure')
     out_f.pack(side=LEFT)
 
     Label(out_f, textvariable=self.status_var, bg='azure', fg='#FF4500', font=('times', 25, 'italic')).pack(side=TOP, pady=15)
-
-    # SideFrame(TOP, range(1, 16), out_f)
-    # SideFrame(BOTTOM, range(1, 16), out_f)
-    # SideFrame(LEFT, range(97, 112), out_f)
-    # SideFrame(RIGHT, range(97, 112), out_f)
 
     board_f = Frame(out_f)
     board_f.pack(side=TOP)
@@ -127,37 +127,41 @@ class GamePage(Frame):
 
   def draw_info_frame(self):
     info_frame = Frame(self, bg='azure')
-    info_frame.pack(side=LEFT)
+    info_frame.pack(side=LEFT, fill=BOTH)
+
+    f = Frame(info_frame, bg='azure')
+    f.pack(side=TOP, pady=200, fill=X)
 
     options = {'font': ('times', 15, 'italic'), 'bg': 'azure', 'fg': '#004d00'}
 
     if self.time_limit:
-      Label(info_frame, textvariable=self.time_var, font=('times', 15, 'italic'), bg='#004d00', fg='azure').pack(side=TOP, anchor=NW)
+      Label(f, textvariable=self.time_var, font=('times', 15, 'italic'), bg='#004d00', fg='azure').pack(anchor=NW)
 
-    Label(info_frame, textvariable=self.bag_var, **options).pack(side=TOP, anchor=NW, pady=10)
+    Label(f, textvariable=self.bag_var, **options).pack(pady=10)
 
-    lf = LabelFrame(info_frame, pady=5, padx=5, bg='azure')
-    lf.pack(side=TOP, anchor=NW)
+    lf = LabelFrame(f, pady=5, padx=5, bg='azure')
+    lf.pack(anchor=NW)
 
     self.pl1_var = StringVar()
-    Label(lf, textvariable=self.pl1_var, **options).pack(side=TOP, anchor=NW)
+    Label(lf, textvariable=self.pl1_var, **options).pack(anchor=NW)
 
     self.pl2_var = StringVar()
-    Label(lf, textvariable=self.pl2_var, **options).pack(side=TOP, anchor=NW)
+    Label(lf, textvariable=self.pl2_var, **options).pack(anchor=NW)
 
     if self.play_num >= 3:
-      print(1)
       self.pl3_var = StringVar()
-      Label(lf, textvariable=self.pl3_var, **options).pack(side=TOP, anchor=NW)
+      Label(lf, textvariable=self.pl3_var, **options).pack(anchor=NW)
 
     if self.play_num == 4:
-      print(2)
       self.pl4_var = StringVar()
-      Label(lf, textvariable=self.pl4_var, **options).pack(side=TOP, anchor=NW)
+      Label(lf, textvariable=self.pl4_var, **options).pack(anchor=NW)
 
-    Label(info_frame, text='Words:', **options).pack(side=TOP, anchor=NW, pady=10)
+    Label(f, text='Words:', **options).pack(anchor=NW, pady=10)
 
-    Label(info_frame, textvariable=self.words_var, **options).pack(side=TOP, anchor=NW)
+    Message(f, textvariable=self.words_var, font=('times', 14, 'italic'), anchor=NW, bg='azure', fg='#004d00').pack(anchor=NW, fill=X)
+
+    self.sav = Button(info_frame, text='Save Game', command=self.save)
+    self.sav.pack(side=BOTTOM, pady=30)
 
   def determine_background(self, t):
     if t.name in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
@@ -171,12 +175,9 @@ class GamePage(Frame):
     else:
       t['bg'] = '#ffd6cc'
 
-  def draw(self):
-    self.draw_board()
-    self.draw_info_frame()
-
   def pass_popup(self):
     w = Toplevel(self)
+    w.title('Pass Letters')
 
     f = Frame(w)
     f.pack(side=TOP)
@@ -201,20 +202,21 @@ class GamePage(Frame):
     w.focus_set()
     w.wait_window()
 
-  def set_word_info(self):
+  def set_word_info(self, word):
     mes = ''
 
-    for word in self.word.words:
-      mes = mes + ('{} {}\n'.format(word, self.word.words[word]))
+    for w in word.words:
+      mes = mes + ('{} {}\n'.format(w, word.words[w]))
 
     if len(self.empty_tiles) == 7:
-      mes = mes + ('\nBonus 60')
+      mes = mes + ('\nBonus 60\n')
 
     self.words_var.set(mes[:-1])
 
   def normalize_board(self):
     self.sub.config(state=NORMAL)
     self.pas.config(state=NORMAL)
+    self.sav.config(state=NORMAL)
 
     for k, v in self.gui_board.items():
       self.gui_board[k].active = True
@@ -314,8 +316,9 @@ class GamePage(Frame):
       self.opponent = AIOpponent()
 
     if self.time_limit:
-      print(1)
       self.countdown()
+
+    self.master.master.after(1000, self.check_game_over)
 
     self.initialize_players()
 
@@ -332,6 +335,31 @@ class GamePage(Frame):
 
     if self.comp_mode:
       self.opponent.letters = self.player_racks[1]
+
+    if self.loading:
+      self.master.master.after(1000, self.load_game)
+    else:
+      self.switch_player()
+
+  def load_game(self):
+    keys = []
+    values = []
+
+    for key, value in self.board.board.items():
+      if re.fullmatch('[A-Z@]', value):
+        keys.append(key)
+        values.append(value)
+
+    for key, value in self.gui_board.items():
+      if key in keys:
+        self.gui_board[key].var.set(values[keys.index(key)])
+        self.gui_board[key].active = False
+        self.gui_board[key]['bg'] = '#BE975B'
+
+        self.used_spots[key] = self.gui_board[key]
+
+    for key in keys:
+      del self.gui_board[key]
 
     self.switch_player()
 
@@ -351,8 +379,10 @@ class GamePage(Frame):
     self.player_racks[self.cur_play_mark] = [x.var.get() for x in self.rack]
 
   def switch_player(self):
-    if self.norm_mode:
+    if self.norm_mode and not self.loading:
       self.cur_play_mark = (self.cur_play_mark + 1) % self.play_num
+
+    self.loading = False
 
     self.update_info()
     self.decorate_rack()
@@ -385,27 +415,34 @@ class GamePage(Frame):
   def get_ai_move(self):
     word = self.opponent.get_move(self.bag, self.board, self.dict)
 
-    for s, l in zip(word.range, word.word):
-      if self.gui_board.get(s, False):
-        self.gui_board[s].var.set(l)
-        self.gui_board[s]['bg'] = '#BE975B'
-        self.gui_board[s].active = False
+    if self.opponent.is_passing:
+      self.passes += 1
+    else:
+      self.passes = 0
 
-        self.used_spots[s] = self.gui_board[s]
+      for s, l in zip(word.range, word.word):
+        if self.gui_board.get(s, False):
+          self.gui_board[s].var.set(l)
+          self.gui_board[s]['bg'] = '#BE975B'
+          self.gui_board[s].active = False
 
-        del self.gui_board[s]
+          self.used_spots[s] = self.gui_board[s]
 
-    self.player_scores[1] += word.points
+          del self.gui_board[s]
 
-    self.board.place(word.word, word.range)
-    self.opponent.update_rack(self.bag)
+      self.player_scores[1] += word.points
 
-    self.set_word_info()
+      self.board.place(word.word, word.range)
+      self.opponent.update_rack(self.bag)
+
+      self.set_word_info(word)
+
     self.normalize_board()
 
   def wait_comp(self):
     self.sub.config(state=DISABLED)
     self.pas.config(state=DISABLED)
+    self.sav.config(state=DISABLED)
 
     for k, v in self.gui_board.items():
       self.gui_board[k].active = False
@@ -465,6 +502,7 @@ class GamePage(Frame):
         self.not_proceed = True
 
       if not self.not_proceed and self.word.validate():
+        self.pass_num = 0
         self.wild_tile = None
         self.prev_words = []
 
@@ -484,7 +522,7 @@ class GamePage(Frame):
 
         self.board.place(self.raw_word, self.sorted_keys)
 
-        self.set_word_info()
+        self.set_word_info(self.word)
 
         self.prev_words.append(self.word.word)
         self.prev_words.extend([x[0] for x in self.word.extra_words])
@@ -523,10 +561,13 @@ class GamePage(Frame):
       self.time_var.set('{}:{} Left'.format(self.minutes, seconds))
       self.master.master.after(1000, self.countdown)
     else:
-      self.over = True
+      self.time_up = True
+
+      self.end_game()
 
   def wild_tile_popup(self):
     w = Toplevel(self)
+    w.title('Set Wild Tile')
 
     f = Frame(w)
     f.pack(side=TOP)
@@ -537,7 +578,7 @@ class GamePage(Frame):
 
     Label(f, text='Enter a Letter:').pack(side=LEFT)
 
-    e = Entry(f, width=2)
+    e = Entry(f)
     e.pack(side=LEFT)
     e.focus()
 
@@ -646,11 +687,16 @@ class GamePage(Frame):
 
     for tile in self.rack:
       if tile.var.get() in passed_letters:
-        self.bag.put_back([tile.var.get()])
-        del passed_letters[passed_letters.index(tile.var.get())]
+        t = tile.var.get()
         tile.var.set(self.bag.draw())
+        self.bag.put_back([t])
+        del passed_letters[passed_letters.index(t)]
 
     entry.master.master.destroy()
+
+    self.update_racks()
+
+    self.pass_num += 1
 
     if self.norm_mode:
       self.switch_player()
@@ -695,3 +741,98 @@ class GamePage(Frame):
           return
 
       self.switch_player()
+
+  def check_game_over(self):
+    if len(self.bag.bag) == 0:
+      for rack in self.player_racks:
+        if len(rack) == 0:
+          self.end_game()
+
+          return
+
+      self.master.master.after(1000, self.check_game_over)
+    elif self.pass_num == 3 * self.play_num:
+      self.end_game()
+    elif self.point_limit:
+      for score in self.player_scores:
+        if score >= self.point_limit:
+          self.end_game()
+
+          return
+
+      self.master.master.after(1000, self.check_game_over)
+    else:
+      self.master.master.after(1000, self.check_game_over)
+
+  def determine_winner(self):
+    pts = max(self.player_scores)
+    ply = self.players[self.player_scores.index(pts)]
+
+    self.winner = (ply, pts)
+
+  def end_game(self):
+    self.determine_winner()
+
+    if self.time_up:
+      rea = 'Time Is Up'
+    else:
+      rea = 'Game Is Over'
+
+    mes = '{} has won with {} points!'.format(self.winner[0], self.winner[1])
+
+    w = Toplevel(self)
+    w.title(rea)
+
+    self.master.master.update()
+    x = self.master.master.winfo_rootx() + 200
+    w.geometry("+{}+{}".format(x, 300))
+
+    w.protocol('WM_DELETE_WINDOW', lambda: self.quit_game(w))
+
+    Label(w, text=mes, font=('times', 30, 'italic')).pack(side=TOP, padx=50, pady=30)
+
+    Button(w, text='Quit', command=lambda: self.quit_game(w)).pack()
+    Button(w, text='Restart', command=self.restart_game).pack(pady=15)
+
+    w.grab_set()
+    w.focus_set()
+    w.wait_window()
+
+  def quit_game(self, win):
+    win.destroy()
+    self.master.master.quit()
+
+  def restart_game(self):
+    self.master.master.geometry('704x420')
+    self.master.master.minsize(704, 420)
+
+    self.destroy()
+
+  def save(self):
+    if not os.path.exists('./saves'):
+      os.mkdir('./saves')
+
+    filename = asksaveasfilename(initialdir='saves', defaultextension='.pickle')
+
+    if filename:
+      data = {}
+      data['play_num'] = self.play_num
+      data['player_racks'] = self.player_racks
+      data['player_scores'] = self.player_scores
+      data['players'] = self.players
+      data['pass_num'] = self.pass_num
+      data['cur_play_mark'] = self.cur_play_mark
+      data['chal_mode'] = self.chal_mode
+      data['comp_mode'] = self.comp_mode
+      data['norm_mode'] = self.norm_mode
+      data['point_limit'] = self.point_limit
+      data['time_limit'] = self.time_limit
+      data['bag'] = self.bag
+      data['board'] = self.board
+      data['op_score'] = self.op_score
+      data['seconds'] = self.seconds
+      data['minutes'] = self.minutes
+
+      file = open(filename, 'wb')
+      pickle.dump(data, file)
+

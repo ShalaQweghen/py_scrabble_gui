@@ -5,14 +5,16 @@ from tkinter import *
 from game_page import GamePage
 
 class StartPage(Frame):
-  def __init__(self, parent):
+  def __init__(self, parent, dic='./dics/sowpods.txt'):
     self.parent = parent
+    self.dict = dic
 
     Frame.__init__(self, parent, bg='azure')
     self.grid(row=0, column=0, sticky=S+N+E+W)
 
     self.chal_var = IntVar()
     self.time_var = IntVar()
+    self.point_var = IntVar()
     self.but_var = StringVar()
 
     self.but_var.set('Start Game')
@@ -20,7 +22,6 @@ class StartPage(Frame):
     self.players = []
 
     self.draw_heading()
-    self.draw_buttons()
     self.draw_player_name()
 
     self.opt_cont = Frame(self, bg='azure')
@@ -33,23 +34,27 @@ class StartPage(Frame):
     Label(self, text='OPTIONS', font=('times', 35, 'italic'), bg='azure', pady=40).pack(side=TOP)
 
   def draw_secondary_options(self):
-    sof = LabelFrame(self.opt_cont, bg='azure', padx=50, pady=10)
-    sof.pack(side=LEFT)
-
-    cb = Checkbutton(sof, bg='azure', text='Challenge Mode', variable=self.chal_var)
-    cb.pack(anchor=NW)
+    cb = Checkbutton(self, bg='azure', text='Challenge Mode', variable=self.chal_var)
+    cb.pack(pady=15)
     cb.deselect()
 
-    Label(sof, bg='azure', text='Time Limit:').pack(side=LEFT)
+    f1 = Frame(self, bg='azure')
+    f1.pack()
 
-    ent = Entry(sof, textvariable=self.time_var, width=3)
-    ent.pack(side=LEFT)
-    ent.insert(1, 0)
+    Label(f1, bg='azure', text='Time Limit:').pack(side=LEFT)
 
-  def draw_buttons(self):
-    f = LabelFrame(self, bd=0, bg='azure')
-    f.pack(side=BOTTOM, pady=40)
-    Button(f, textvariable=self.but_var, command=self.construct_options).pack(pady=10)
+    Entry(f1, textvariable=self.time_var, width=3).pack(side=LEFT)
+    self.time_var.set(0)
+
+    f2 = Frame(self, bg='azure')
+    f2.pack(pady=5)
+
+    Label(f2, bg='azure', text='Point Limit:').pack(side=LEFT)
+
+    Entry(f2, textvariable=self.point_var, width=3).pack(side=LEFT)
+    self.point_var.set(0)
+
+    Button(self, textvariable=self.but_var, command=self.construct_options).pack(pady=10)
 
   def draw_player_name(self): pass
 
@@ -59,37 +64,37 @@ class StartPage(Frame):
 
 #############################################################################
 
-class LANStartPage(StartPage):
-  def draw_player_name(self):
-    self.name_var = StringVar()
+# class LANStartPage(StartPage):
+#   def draw_player_name(self):
+#     self.name_var = StringVar()
 
-    f = Frame(self, bg='azure')
-    f.pack(side=TOP, pady=20)
+#     f = Frame(self, bg='azure')
+#     f.pack(side=TOP, pady=20)
 
-    Label(f, text='Enter Your Name:', bg='azure').pack(side=LEFT)
-    Entry(f, textvariable=self.name_var).pack(side=LEFT)
+#     Label(f, text='Enter Your Name:', bg='azure').pack(side=LEFT)
+#     Entry(f, textvariable=self.name_var).pack(side=LEFT)
 
-  def draw_player_options(self):
-    self.play_var = IntVar()
-    self.play_dict = {'2 players': 2,
-                      '3 players': 3,
-                      '4 players': 4}
+#   def draw_player_options(self):
+#     self.play_var = IntVar()
+#     self.play_dict = {'2 players': 2,
+#                       '3 players': 3,
+#                       '4 players': 4}
 
-    pof = LabelFrame(self.opt_cont, bg='azure', pady=10, padx=10)
-    pof.pack(side=LEFT)
+#     pof = LabelFrame(self.opt_cont, bg='azure', pady=10, padx=10)
+#     pof.pack(side=LEFT)
 
-    for k, v in self.play_dict.items():
-      r = Radiobutton(pof, bg='azure', text=k, variable=self.play_var, value=v)
-      r.pack(anchor=NW)
+#     for k, v in self.play_dict.items():
+#       r = Radiobutton(pof, bg='azure', text=k, variable=self.play_var, value=v)
+#       r.pack(anchor=NW)
 
-    self.play_var.set(2)
+#     self.play_var.set(2)
 
-  def construct_options(self):
-    self.options['network_mode'] = True
-    self.options['time_limit'] = self.time_var.get()
-    self.options['player_name'] = self.play_var.get()
-    self.options['players'] = self.play_var.get()
-    self.options['challenge_mode'] = bool(self.chal_var.get())
+#   def construct_options(self):
+#     self.options['network_mode'] = True
+#     self.options['time_limit'] = self.time_var.get()
+#     self.options['player_name'] = self.play_var.get()
+#     self.options['players'] = self.play_var.get()
+#     self.options['challenge_mode'] = bool(self.chal_var.get())
 
 #############################################################################
 
@@ -102,8 +107,8 @@ class NormalStartPage(StartPage):
                       '3 players': 3,
                       '4 players': 4}
 
-    pof = LabelFrame(self.opt_cont, bg='azure', pady=10, padx=10)
-    pof.pack(side=LEFT)
+    pof = LabelFrame(self.opt_cont, text='# of Players', bg='azure', pady=10, padx=10)
+    pof.pack()
 
     for k, v in self.play_dict.items():
       r = Radiobutton(pof, bg='azure', text=k, variable=self.play_var, value=v)
@@ -112,11 +117,11 @@ class NormalStartPage(StartPage):
     self.play_var.set(2)
 
   def draw_name_fields(self):
-    self.parent.master.geometry("704x500")
-    self.parent.master.minsize(704, 500)
+    self.parent.master.geometry('704x580')
+    self.parent.master.minsize(704, 580)
 
-    t = LabelFrame(self, pady=10, padx=10, bg='azure')
-    t.pack(pady=10)
+    t = Frame(self, pady=20, padx=10, bg='azure')
+    t.pack()
 
     for p in range(1, self.play_var.get() + 1):
       var = StringVar()
@@ -149,13 +154,16 @@ class NormalStartPage(StartPage):
       self.options['time_limit'] = self.time_var.get()
       self.options['players'] = self.play_var.get()
       self.options['challenge_mode'] = bool(self.chal_var.get())
+      self.options['point_limit'] = self.point_var.get()
 
       self.parent.master.geometry('750x785')
       self.parent.master.minsize(750, 785)
 
-      page = GamePage(self.parent, self.options)
+      page = GamePage(self.parent, self.options, self.dict)
       page.tkraise()
-      print(self.options)
+
+      self.destroy()
     else:
       self.draw_name_fields()
+
       self.but_var.set('Start Game')
