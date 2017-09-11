@@ -683,6 +683,15 @@ class GamePage(Frame):
           flag = False
 
   def pass_letters(self, entry):
+    for key, value in self.gui_board.items():
+      if value.var.get() != '':
+        self.empty_tiles[0].var.set(value.var.get())
+        self.empty_tiles[0]['bg'] = '#BE975B'
+        del self.empty_tiles[0]
+
+        value.var.set('')
+        self.determine_background(value)
+
     passed_letters = list(re.sub('[^A-Z@]', '', entry.get().upper()))
 
     for tile in self.rack:

@@ -45,7 +45,9 @@ class Root(Tk):
     if askyesno('Start New Game', 'Are you sure to start a new game?'):
       self.geometry('704x420')
       self.minsize(704, 420)
+
       self.container.destroy()
+
       self.draw_container()
 
       EntryPage(self.container, self.dict)
