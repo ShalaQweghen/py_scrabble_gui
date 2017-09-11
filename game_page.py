@@ -774,6 +774,10 @@ class GamePage(Frame):
       self.master.master.after(1000, self.check_game_over)
 
   def determine_winner(self):
+    for i, rack in enumerate(self.player_racks):
+      for l in rack:
+        self.player_scores[i] -= self.word.letter_points[l]
+
     pts = max(self.player_scores)
     ply = self.players[self.player_scores.index(pts)]
 
