@@ -208,7 +208,7 @@ class GamePage(Frame):
     for w in word.words:
       mes = mes + ('{} {}\n'.format(w, word.words[w]))
 
-    if len(self.empty_tiles) == 7:
+    if len(self.empty_tiles) == 7 or self.comp_mode and len(self.opponent.letters) == 0:
       mes = mes + ('\nBonus 60\n')
 
     self.words_var.set(mes[:-1])
@@ -432,10 +432,13 @@ class GamePage(Frame):
 
       self.player_scores[1] += word.points
 
-      self.board.place(word.word, word.range)
-      self.opponent.update_rack(self.bag)
+      if len(self.opponent.letters) == 0:
+        self.player_scores[1] += 60
 
       self.set_word_info(word)
+
+      self.board.place(word.word, word.range)
+      self.opponent.update_rack(self.bag)
 
     self.normalize_board()
 
