@@ -57,8 +57,6 @@ class EntryPage(Frame):
                   'normal_mode': data['norm_mode'],
                   'time_limit': data['time_limit'],
                   'point_limit': data['point_limit'],
-                  'names': data['players'],
-                  'players': data['play_num'],
                   'loading': True
                 }
 
@@ -67,9 +65,9 @@ class EntryPage(Frame):
 
       game = GamePage(self.master, options)
 
-      game.player_racks = data['player_racks']
-      game.player_scores = data['player_scores']
       game.cur_play_mark = data['cur_play_mark']
+      game.players = data['players']
+      game.play_num = data['play_num']
       game.bag = data['bag']
       game.board = data['board']
       game.op_score = data['op_score']

@@ -2,10 +2,10 @@ from tkinter import *
 
 class Tile(Label):
   def __init__(self, parent=None, letter=''):
-    self.var = StringVar()
-    self.var.set(letter)
+    self.letter = StringVar()
+    self.letter.set(letter)
 
-    Label.__init__(self, parent, textvariable=self.var)
+    Label.__init__(self, parent, textvariable=self.letter)
     self.config(bd=1, height=2, font=('times', 14, 'bold'), width=4, relief=SUNKEN)
 
 class BoardTile(Tile):

@@ -10,6 +10,7 @@ class Word:
 
     self.points = 0
     self.valid = False
+    self.aob_list = []
     self.wild_tiles = []
     self.extra_words = []
     self.words = {}
@@ -17,7 +18,6 @@ class Word:
     self.chal_mode = chal
 
     self.range = self._set_range()
-    self.aob_list = self._set_aob_list()
     self.letter_points = self._set_letter_points()
 
   def process_extra_words(self):
@@ -102,6 +102,9 @@ class Word:
 
       return True
 
+  def set_aob_list(self, aob_list):
+    self.aob_list = aob_list
+
   def _set_range(self):
     if self.direction == "r":
       squares = self._set_range_to_right()
@@ -131,15 +134,6 @@ class Word:
     else:
       last = int(self.start[1:]) - len(self.word)
       return list(map(lambda x: self.start[0] + str(x), list(range(int(self.start[1:]), last, -1))))
-
-  def _set_aob_list(self):
-    aob_list = []
-    if self.range:
-      for i, spot in enumerate(self.range):
-        if self.board.board[spot] == self.word[i]:
-          aob_list.append(self.word[i])
-
-    return aob_list
 
   def _set_up_or_left_extra_word(self, square, extra_word):
     while self.board.occupied(square, self.direction, self.board.up_or_left):

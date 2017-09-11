@@ -48,11 +48,14 @@ class Player:
 
 		self.passed_letters = []
 
-	def update_score(self):
-		self.score += self.word.calculate_total_points()
+	def update_score(self, points=0):
+		if points:
+			self.score -= points
+		else:
+			self.score += self.word.calculate_total_points()
 
-		if self.full_bonus:
-			self.score += 60
+			if self.full_bonus:
+				self.score += 60
 
 	def _pick_from(self, bag):
 		if bag:

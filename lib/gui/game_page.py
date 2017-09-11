@@ -36,9 +36,11 @@ class GamePage(Frame):
     self.start = None
     self.wild_tile = None
     self.cur_player = None
+    self.wild_tile_clone = None
     self.over = False
     self.time_up = False
-    self.not_proceed = False
+    self.may_proceed = True
+    self.changing_wild_tile = False
     self.seconds = 0
     self.op_score = 0
     self.pass_num = 0
@@ -114,7 +116,7 @@ class GamePage(Frame):
     self.sub = Button(button_f, text='Submit', bg='azure', command=self.process_word)
     self.sub.pack(side=LEFT, padx=5)
 
-    self.pas = Button(button_f, text='Pass', bg='azure', command=self.pass_popup)
+    self.pas = Button(button_f, text='Pass', bg='azure', command=lambda: self.show_popup('Pass Letters', 'Enter letters to pass:', 'Pass', self.pass_letters))
     self.pas.pack(side=LEFT, padx=5)
 
     if self.chal_mode:
@@ -123,6 +125,22 @@ class GamePage(Frame):
 
     if self.norm_mode:
       Button(button_f, text='Reveal', command=self.reveal).pack()
+
+  def determine_background(self, t):
+    if t.name in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
+      t['bg'] = '#ff3300'
+    elif t.name in 'h8 b2 c3 d4 e5 b14 c13 d12 e11 n2 m3 l4 k5 n14 m13 l12 k11'.split():
+      t['bg'] = '#ff99cc'
+    elif t.name in 'b6 b10 n6 n10 f2 f6 f10 f14 j2 j6 j10 j14'.split():
+      t['bg'] = '#3366ff'
+    elif t.name in 'a4 a12 c7 c9 d1 d8 d15 g3 g7 g9 g13 h4 h12 o4 o12 m7 m9 l1 l8 l15 i3 i7 i9 i13'.split():
+      t['bg'] = '#b3c6ff'
+    else:
+      t['bg'] = '#ffd6cc'
+
+  def reveal(self):
+    for t in self.rack:
+      t['fg'] = 'black'
 
   def draw_info_frame(self):
     info_frame = Frame(self, bg='azure')
@@ -159,47 +177,8 @@ class GamePage(Frame):
 
     Message(f, textvariable=self.words_var, font=('times', 14, 'italic'), anchor=NW, bg='azure', fg='#004d00').pack(anchor=NW, fill=X)
 
-    self.sav = Button(info_frame, text='Save Game', command=self.save)
+    self.sav = Button(info_frame, text='Save Game', command=self.save_game)
     self.sav.pack(side=BOTTOM, pady=30)
-
-  def determine_background(self, t):
-    if t.name in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
-      t['bg'] = '#ff3300'
-    elif t.name in 'h8 b2 c3 d4 e5 b14 c13 d12 e11 n2 m3 l4 k5 n14 m13 l12 k11'.split():
-      t['bg'] = '#ff99cc'
-    elif t.name in 'b6 b10 n6 n10 f2 f6 f10 f14 j2 j6 j10 j14'.split():
-      t['bg'] = '#3366ff'
-    elif t.name in 'a4 a12 c7 c9 d1 d8 d15 g3 g7 g9 g13 h4 h12 o4 o12 m7 m9 l1 l8 l15 i3 i7 i9 i13'.split():
-      t['bg'] = '#b3c6ff'
-    else:
-      t['bg'] = '#ffd6cc'
-
-  def pass_popup(self):
-    w = Toplevel(self)
-    w.title('Pass Letters')
-
-    f = Frame(w)
-    f.pack(side=TOP)
-
-    self.master.master.update()
-    x = self.master.master.winfo_rootx() + 200
-    w.geometry("+{}+{}".format(x, 300))
-
-    Label(f, text='Enter letters to pass:').pack(side=LEFT)
-
-    e = Entry(f)
-    e.pack(side=LEFT)
-    e.focus()
-
-    bf = Frame(w)
-    bf.pack(side=BOTTOM)
-
-    Button(bf, text='Pass', command=lambda: self.pass_letters(e)).pack(side=LEFT)
-    Button(bf, text='Cancel', command=w.destroy).pack()
-
-    w.grab_set()
-    w.focus_set()
-    w.wait_window()
 
   def set_word_info(self, word):
     mes = ''
@@ -212,103 +191,54 @@ class GamePage(Frame):
 
     self.words_var.set(mes[:-1])
 
-  def normalize_board(self):
-    self.sub.config(state=NORMAL)
-    self.pas.config(state=NORMAL)
-    self.sav.config(state=NORMAL)
+  def show_popup(self, title_text, label_text, button_text, command):
+    if button_text == 'Set':
+      self.changing_wild_tile = True
 
-    for k, v in self.gui_board.items():
-      self.gui_board[k].active = True
+    w = Toplevel(self)
+    w.title(title_text)
 
-    self.status_var.set('... Player\'s Turn ...')
-    self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
-    self.pl2_var.set('Computer: {}'.format(self.players[1].score))
+    w.protocol('WM_DELETE_WINDOW', lambda: self.cancel_popup(w))
 
-  def reveal(self):
-    for t in self.rack:
-      t['fg'] = 'black'
+    f = Frame(w)
+    f.pack(side=TOP)
 
-  def place_tile(self, event):
-    start_name = type(self.start).__name__
-    widget_name = type(event.widget).__name__
-    widget_var = event.widget.var
+    self.master.master.update()
+    x = self.master.master.winfo_rootx() + 200
+    w.geometry("+{}+{}".format(x, 300))
 
-    if start_name == 'RackTile' and self.start.var.get() != '':
-      if widget_name == 'BoardTile' and event.widget.active:
-        if widget_var.get() == '':
-          widget_var.set(self.start.var.get())
-          event.widget['bg'] = self.start['bg']
+    Label(f, text=label_text).pack(side=LEFT)
 
-          self.letters[event.widget.name] = event.widget
-          self.letter_buffer.append(event.widget)
-          self.empty_tiles.append(self.start)
+    e = Entry(f)
+    e.pack(side=LEFT)
+    e.focus()
 
-          self.start['bg'] = '#cccccc'
-          self.start.var.set('')
-          self.start = None
-      elif widget_name == 'RackTile':
-        temp = widget_var.get()
-        widget_var.set(self.start.var.get())
+    bf = Frame(w)
+    bf.pack(side=BOTTOM)
 
-        if event.widget in self.empty_tiles:
-          self.empty_tiles.append(self.start)
-          del self.empty_tiles[self.empty_tiles.index(event.widget)]
+    Button(bf, text=button_text, command=lambda: command(e)).pack(side=LEFT)
+    Button(bf, text='Cancel', command=lambda: self.cancel_popup(w)).pack()
 
-          event.widget['bg'] = '#BE975B'
-          self.start['bg'] = '#cccccc'
+    w.grab_set()
+    w.focus_set()
+    w.wait_window()
 
-        self.start.var.set(temp)
-        self.start = None
-      else:
-        self.start = None
-    elif start_name == 'BoardTile' and self.start.var.get() != '' and self.start.active:
-      if widget_name == 'RackTile' and widget_var.get() == '':
-        del self.letters[self.start.name]
-        del self.empty_tiles[self.empty_tiles.index(event.widget)]
+  def cancel_move(self):
+    for t1, t2 in zip(self.empty_tiles, self.letters.values()):
+      t1.letter.set(t2.letter.get())
+      t2.letter.set('')
+      t1['bg'] = '#BE975B'
+      self.determine_background(t2)
 
-        self.letter_buffer.remove(self.start)
+    self.letters = {}
+    self.may_proceed = False
 
-        widget_var.set(self.start.var.get())
-        event.widget['bg'] = '#BE975B'
+  def cancel_popup(self, popup):
+    popup.destroy()
 
-        self.determine_background(self.start)
-
-        self.start.var.set('')
-        self.start = None
-      elif widget_name == 'BoardTile' and event.widget.active:
-        if widget_var.get() == '':
-          widget_var.set(self.start.var.get())
-          event.widget['bg'] = self.start['bg']
-
-          self.update_buffer_letters(event.widget)
-          self.determine_background(self.start)
-
-          del self.letters[self.start.name]
-
-          self.letters[event.widget.name] = event.widget
-
-          self.start.var.set('')
-          self.start = None
-        elif widget_var.get() == self.start.var.get():
-          self.start = None
-        else:
-          temp = widget_var.get()
-          widget_var.set(self.start.var.get())
-          self.start.var.set(temp)
-
-          self.update_buffer_letters(event.widget)
-
-          self.letters[self.start.name] = self.start
-          self.letters[event.widget.name] = event.widget
-          self.start = None
-    else:
-      self.start = event.widget
-
-  def update_buffer_letters(self, tile):
-    for it in self.letter_buffer:
-      if it.name == self.start.name:
-        self.letter_buffer.remove(it)
-        self.letter_buffer.append(tile)
+    if self.changing_wild_tile:
+      self.cancel_move()
+      self.changing_wild_tile = False
 
   def initialize_game(self):
     if self.time_limit:
@@ -318,6 +248,26 @@ class GamePage(Frame):
 
     self.initialize_players()
 
+  def countdown(self):
+    if self.seconds == 0:
+      self.seconds = 59
+      self.minutes -= 1
+    else:
+      self.seconds -= 1
+
+    if self.seconds >= 0 and self.minutes >= 0:
+      if self.seconds > 9:
+        seconds = str(self.seconds)
+      else:
+        seconds = '0' + str(self.seconds)
+
+      self.time_var.set('{}:{} Left'.format(self.minutes, seconds))
+      self.master.master.after(1000, self.countdown)
+    else:
+      self.time_up = True
+
+      self.end_game()
+
   def initialize_players(self):
     for i in range(self.play_num):
       pl = Player(self.players[i])
@@ -326,7 +276,7 @@ class GamePage(Frame):
 
       if self.comp_mode:
         self.opponent = AIOpponent()
-        self.opponent.draw_letters()
+        self.opponent.draw_letters(self.bag)
         self.players.append(self.opponent)
 
         break
@@ -349,7 +299,7 @@ class GamePage(Frame):
 
     for key, value in self.gui_board.items():
       if key in keys:
-        self.gui_board[key].var.set(values[keys.index(key)])
+        self.gui_board[key].letter.set(values[keys.index(key)])
         self.gui_board[key].active = False
         self.gui_board[key]['bg'] = '#BE975B'
 
@@ -359,23 +309,6 @@ class GamePage(Frame):
       del self.gui_board[key]
 
     self.switch_player()
-
-  def decorate_rack(self):
-    rack = self.cur_player.letters
-
-    for l, t in zip(rack, self.rack):
-      if l == '@':
-        t.var.set(' ')
-      else:
-        t.var.set(l)
-
-      if self.norm_mode:
-        t['fg'] = '#BE975B'
-
-  def update_rack(self):
-    for rt, l in zip(self.rack, self.cur_player.letters):
-      rt.var.set(l)
-      rt['bg'] = '#BE975B'
 
   def switch_player(self):
     if self.norm_mode and not self.loading:
@@ -402,6 +335,33 @@ class GamePage(Frame):
 
     self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
 
+  def decorate_rack(self):
+    rack = self.cur_player.letters
+
+    for l, t in zip(rack, self.rack):
+      if l == '@':
+        t.letter.set(' ')
+      else:
+        t.letter.set(l)
+
+      if self.norm_mode:
+        t['fg'] = '#BE975B'
+
+  def wait_comp(self):
+    self.sub.config(state=DISABLED)
+    self.pas.config(state=DISABLED)
+    self.sav.config(state=DISABLED)
+
+    for k, v in self.gui_board.items():
+      self.gui_board[k].active = False
+
+    self.pl1_var.set('Player: {}'.format(self.cur_player.score))
+    self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
+    self.status_var.set('... Computer\'s Turn ...')
+
+    self.thread = threading.Thread(target=self.get_ai_move, args=())
+    self.thread.start()
+
   def get_ai_move(self):
     word = self.opponent.get_move(self.bag, self.board, self.dict)
 
@@ -412,7 +372,7 @@ class GamePage(Frame):
 
       for s, l in zip(word.range, word.word):
         if self.gui_board.get(s, False):
-          self.gui_board[s].var.set(l)
+          self.gui_board[s].letter.set(l)
           self.gui_board[s]['bg'] = '#BE975B'
           self.gui_board[s].active = False
 
@@ -430,20 +390,104 @@ class GamePage(Frame):
 
     self.normalize_board()
 
-  def wait_comp(self):
-    self.sub.config(state=DISABLED)
-    self.pas.config(state=DISABLED)
-    self.sav.config(state=DISABLED)
+  def update_rack(self):
+    for rt, l in zip(self.rack, self.cur_player.letters):
+      rt.letter.set(l)
+      rt['bg'] = '#BE975B'
+
+  def normalize_board(self):
+    self.sub.config(state=NORMAL)
+    self.pas.config(state=NORMAL)
+    self.sav.config(state=NORMAL)
 
     for k, v in self.gui_board.items():
-      self.gui_board[k].active = False
+      self.gui_board[k].active = True
 
-    self.pl1_var.set('Player: {}'.format(self.cur_player.score))
+    self.status_var.set('... Player\'s Turn ...')
     self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
-    self.status_var.set('... Computer\'s Turn ...')
+    self.pl2_var.set('Computer: {}'.format(self.players[1].score))
 
-    self.thread = threading.Thread(target=self.get_ai_move, args=())
-    self.thread.start()
+  def place_tile(self, event):
+    start_name = type(self.start).__name__
+    widget_name = type(event.widget).__name__
+    widget_var = event.widget.letter
+
+    if start_name == 'RackTile' and self.start.letter.get() != '':
+      if widget_name == 'BoardTile' and event.widget.active:
+        if widget_var.get() == '':
+          widget_var.set(self.start.letter.get())
+          event.widget['bg'] = self.start['bg']
+
+          self.letters[event.widget.name] = event.widget
+          self.letter_buffer.append(event.widget)
+          self.empty_tiles.append(self.start)
+
+          self.start['bg'] = '#cccccc'
+          self.start.letter.set('')
+          self.start = None
+      elif widget_name == 'RackTile':
+        temp = widget_var.get()
+        widget_var.set(self.start.letter.get())
+
+        if event.widget in self.empty_tiles:
+          self.empty_tiles.append(self.start)
+          del self.empty_tiles[self.empty_tiles.index(event.widget)]
+
+          event.widget['bg'] = '#BE975B'
+          self.start['bg'] = '#cccccc'
+
+        self.start.letter.set(temp)
+        self.start = None
+      else:
+        self.start = None
+    elif start_name == 'BoardTile' and self.start.letter.get() != '' and self.start.active:
+      if widget_name == 'RackTile' and widget_var.get() == '':
+        del self.letters[self.start.name]
+        del self.empty_tiles[self.empty_tiles.index(event.widget)]
+
+        self.letter_buffer.remove(self.start)
+
+        widget_var.set(self.start.letter.get())
+        event.widget['bg'] = '#BE975B'
+
+        self.determine_background(self.start)
+
+        self.start.letter.set('')
+        self.start = None
+      elif widget_name == 'BoardTile' and event.widget.active:
+        if widget_var.get() == '':
+          widget_var.set(self.start.letter.get())
+          event.widget['bg'] = self.start['bg']
+
+          self.update_buffer_letters(event.widget)
+          self.determine_background(self.start)
+
+          del self.letters[self.start.name]
+
+          self.letters[event.widget.name] = event.widget
+
+          self.start.letter.set('')
+          self.start = None
+        elif widget_var.get() == self.start.letter.get():
+          self.start = None
+        else:
+          temp = widget_var.get()
+          widget_var.set(self.start.letter.get())
+          self.start.letter.set(temp)
+
+          self.update_buffer_letters(event.widget)
+
+          self.letters[self.start.name] = self.start
+          self.letters[event.widget.name] = event.widget
+          self.start = None
+    else:
+      self.start = event.widget
+
+  def update_buffer_letters(self, tile):
+    for it in self.letter_buffer:
+      if it.name == self.start.name:
+        self.letter_buffer.remove(it)
+        self.letter_buffer.append(tile)
 
   def process_word(self):
     if self.letters:
@@ -465,8 +509,8 @@ class GamePage(Frame):
       self.aob_list = []
 
       for key in self.sorted_keys:
-        self.raw_word.append(self.letters[key].var.get())
-        self.add_letters_on_board(key)
+        self.raw_word.append(self.letters[key].letter.get())
+        self.set_aob_list(key)
 
       offset = 0
       length = len(self.sorted_keys)
@@ -485,14 +529,16 @@ class GamePage(Frame):
       self.raw_word = ''.join(self.raw_word)
 
       if ' ' in self.raw_word:
-        self.wild_tile_popup()
+        self.show_popup('Set Wild Tile', 'Enter a letter:', 'Set', self.change_wild_tile)
 
       self.word = Word(self.sorted_keys[0], self.direction, self.raw_word, self.board, self.dict, self.chal_mode)
 
-      if not self.valid_sorted_letters():
-        self.not_proceed = True
+      self.word.set_aob_list([x[2] for x in self.aob_list])
 
-      if not self.not_proceed and self.word.validate():
+      if not self.valid_sorted_letters():
+        self.may_proceed = False
+
+      if self.may_proceed and self.word.validate():
         self.cur_player.word = self.word
 
         self.pass_num = 0
@@ -531,57 +577,42 @@ class GamePage(Frame):
           self.wait_comp()
       else:
         if self.wild_tile:
-          self.wild_tile.var.set(' ')
+          self.wild_tile.letter.set(' ')
           self.wild_tile = None
 
-        self.not_proceed = False
+        self.may_proceed = True
 
-  def countdown(self):
-    if self.seconds == 0:
-      self.seconds = 59
-      self.minutes -= 1
+  def set_aob_list(self, spot):
+    flag = True
+
+    if self.direction == 'd':
+      bef = spot[0] + str(int(spot[1:]) + 1)
+      aft = spot[0] + str(int(spot[1:]) - 1)
+      check = [x[0] for x in self.aob_list if x[0] == aft or x[0] == bef]
+
+      while flag and not check:
+        if aft not in self.gui_board and int(aft[1:]) in range(1, 16):
+          self.aob_list.append((aft, self.sorted_keys.index(spot) + 1, self.used_spots[aft].letter.get()))
+          aft = aft[0] + str(int(aft[1:]) - 1)
+        elif bef not in self.gui_board and int(bef[1:]) in range(1, 16):
+          self.aob_list.insert(0, (bef, self.sorted_keys.index(spot) - 1, self.used_spots[bef].letter.get()))
+          bef = bef[0] + str(int(bef[1:]) + 1)
+        else:
+          flag = False
     else:
-      self.seconds -= 1
+      bef = chr(ord(spot[0]) - 1) + spot[1:]
+      aft = chr(ord(spot[0]) + 1) + spot[1:]
+      check = [x[0] for x in self.aob_list if x[0] == aft or x[0] == bef]
 
-    if self.seconds >= 0 and self.minutes >= 0:
-      if self.seconds > 9:
-        seconds = str(self.seconds)
-      else:
-        seconds = '0' + str(self.seconds)
-
-      self.time_var.set('{}:{} Left'.format(self.minutes, seconds))
-      self.master.master.after(1000, self.countdown)
-    else:
-      self.time_up = True
-
-      self.end_game()
-
-  def wild_tile_popup(self):
-    w = Toplevel(self)
-    w.title('Set Wild Tile')
-
-    f = Frame(w)
-    f.pack(side=TOP)
-
-    self.master.master.update()
-    x = self.master.master.winfo_rootx() + 200
-    w.geometry("+{}+{}".format(x, 300))
-
-    Label(f, text='Enter a Letter:').pack(side=LEFT)
-
-    e = Entry(f)
-    e.pack(side=LEFT)
-    e.focus()
-
-    bf = Frame(w)
-    bf.pack(side=BOTTOM)
-
-    Button(bf, text='Submit', command=lambda: self.change_wild_tile(e)).pack(side=LEFT)
-    Button(bf, text='Cancel', command=lambda: self.cancel_wild_tile_popup(w)).pack()
-
-    w.grab_set()
-    w.focus_set()
-    w.wait_window()
+      while flag and not check:
+        if aft not in self.gui_board and ord(aft[0]) in range(97, 112):
+          self.aob_list.append((aft, self.sorted_keys.index(spot) + 1, self.used_spots[aft].letter.get()))
+          aft = chr(ord(aft[0]) + 1) + aft[1:]
+        elif bef not in self.gui_board and ord(bef[0]) in range(97, 112):
+          self.aob_list.insert(0, (bef, self.sorted_keys.index(spot) - 1, self.used_spots[bef].letter.get()))
+          bef = chr(ord(bef[0]) - 1) + bef[1:]
+        else:
+          flag = False
 
   def valid_sorted_letters(self):
     if self.direction == 'd':
@@ -611,25 +642,11 @@ class GamePage(Frame):
 
     return True
 
-  def cancel_move(self):
-    for t1, t2 in zip(self.empty_tiles, self.letters.values()):
-      t1.var.set(t2.var.get())
-      t2.var.set('')
-      t1['bg'] = '#BE975B'
-      self.determine_background(t2)
-
-    self.letters = {}
-    self.not_proceed = True
-
-  def cancel_wild_tile_popup(self, popup):
-    popup.destroy()
-    self.cancel_move()
-
   def change_wild_tile(self, ent):
     self.raw_word = re.sub(' ', ent.get().upper(), self.raw_word)
 
     for tile in self.letters:
-      if self.letters[tile].var.get() == ' ':
+      if self.letters[tile].letter.get() == ' ':
         self.wild_tile = self.letters[tile]
 
         if self.chal_mode:
@@ -637,52 +654,20 @@ class GamePage(Frame):
 
         self.board.wild_tiles_on_board.append(self.wild_tile.name)
 
-        self.letters[tile].var.set(ent.get().upper())
+        self.letters[tile].letter.set(ent.get().upper())
 
-        self.cur_player.wild_tile.append(ent.get().upper())
+        self.cur_player.wild_tiles.append(ent.get().upper())
 
     ent.master.master.destroy()
 
-  def add_letters_on_board(self, spot):
-    flag = True
-
-    if self.direction == 'd':
-      bef = spot[0] + str(int(spot[1:]) + 1)
-      aft = spot[0] + str(int(spot[1:]) - 1)
-      check = [x[0] for x in self.aob_list if x[0] == aft or x[0] == bef]
-
-      while flag and not check:
-        if aft not in self.gui_board and int(aft[1:]) in range(1, 16):
-          self.aob_list.append((aft, self.sorted_keys.index(spot) + 1, self.used_spots[aft].var.get()))
-          aft = aft[0] + str(int(aft[1:]) - 1)
-        elif bef not in self.gui_board and int(bef[1:]) in range(1, 16):
-          self.aob_list.insert(0, (bef, self.sorted_keys.index(spot) - 1, self.used_spots[bef].var.get()))
-          bef = bef[0] + str(int(bef[1:]) + 1)
-        else:
-          flag = False
-    else:
-      bef = chr(ord(spot[0]) - 1) + spot[1:]
-      aft = chr(ord(spot[0]) + 1) + spot[1:]
-      check = [x[0] for x in self.aob_list if x[0] == aft or x[0] == bef]
-
-      while flag and not check:
-        if aft not in self.gui_board and ord(aft[0]) in range(97, 112):
-          self.aob_list.append((aft, self.sorted_keys.index(spot) + 1, self.used_spots[aft].var.get()))
-          aft = chr(ord(aft[0]) + 1) + aft[1:]
-        elif bef not in self.gui_board and ord(bef[0]) in range(97, 112):
-          self.aob_list.insert(0, (bef, self.sorted_keys.index(spot) - 1, self.used_spots[bef].var.get()))
-          bef = chr(ord(bef[0]) - 1) + bef[1:]
-        else:
-          flag = False
-
   def pass_letters(self, entry):
     for key, value in self.gui_board.items():
-      if value.var.get() != '':
-        self.empty_tiles[0].var.set(value.var.get())
+      if value.letter.get() != '':
+        self.empty_tiles[0].letter.set(value.letter.get())
         self.empty_tiles[0]['bg'] = '#BE975B'
         del self.empty_tiles[0]
 
-        value.var.set('')
+        value.letter.set('')
         self.determine_background(value)
 
     passed_letters = list(re.sub('[^A-Z@]', '', entry.get().upper()))
@@ -705,25 +690,25 @@ class GamePage(Frame):
     if self.chal_mode:
       for word in self.prev_words:
         if not self.dict.valid_word(word):
-          self.players[self.cur_play_mark - 1].update_score(-self.word.points)
+          self.players[self.cur_play_mark - 1].update_score(self.word.points)
 
-          if len(self.cur_player.new_letters) == 7:
-            self.players[self.cur_play_mark - 1].update_score(-60)
+          if len(self.players[self.cur_play_mark - 1].new_letters) == 7:
+            self.players[self.cur_play_mark - 1].update_score(60)
 
-          for new in self.cur_player.new_letters:
-            self.player_racks[self.cur_play_mark - 1].remove(new)
+          for new in self.players[self.cur_play_mark - 1].new_letters:
+            self.players[self.cur_play_mark - 1].letters.remove(new)
             self.bag.put_back([new])
 
           for tile in self.old_letter_buffer:
             if tile.name in self.used_spots:
               if tile is self.wild_tile_clone:
                 self.board.wild_tiles_on_board.remove(tile.name)
-                tile.var.set(' ')
+                tile.letter.set(' ')
 
-              self.player_racks[self.cur_play_mark -1].append(tile.var.get())
+              self.players[self.cur_play_mark -1].letters.append(tile.letter.get())
               self.board.board[tile.name] = ' '
 
-              tile.var.set('')
+              tile.letter.set('')
               tile.active = True
               self.determine_background(tile)
 
@@ -742,8 +727,8 @@ class GamePage(Frame):
 
   def check_game_over(self):
     if len(self.bag.bag) == 0:
-      for rack in self.player_racks:
-        if len(rack) == 0:
+      for pl in self.players:
+        if len(pl.letters) == 0:
           self.end_game()
 
           return
@@ -761,16 +746,6 @@ class GamePage(Frame):
       self.master.master.after(1000, self.check_game_over)
     else:
       self.master.master.after(1000, self.check_game_over)
-
-  def determine_winner(self):
-    for i, rack in enumerate(self.player_racks):
-      for l in rack:
-        self.players[i].update_score(-self.word.letter_points[l])
-
-    pts = max([pl.score for pl in self.players])
-    ply = self.players[[pl.score for pl in self.players].index(pts)].name
-
-    self.winner = (ply, pts)
 
   def end_game(self):
     self.determine_winner()
@@ -800,6 +775,16 @@ class GamePage(Frame):
     w.focus_set()
     w.wait_window()
 
+  def determine_winner(self):
+    for pl in self.players:
+      for l in pl.letters:
+        self.players[i].update_score(self.word.letter_points[l])
+
+    pts = max([pl.score for pl in self.players])
+    ply = self.players[[pl.score for pl in self.players].index(pts)].name
+
+    self.winner = (ply, pts)
+
   def quit_game(self, win):
     win.destroy()
     self.master.master.quit()
@@ -810,7 +795,7 @@ class GamePage(Frame):
 
     self.destroy()
 
-  def save(self):
+  def save_game(self):
     if not os.path.exists('./saves'):
       os.mkdir('./saves')
 
@@ -819,8 +804,6 @@ class GamePage(Frame):
     if filename:
       data = {}
       data['play_num'] = self.play_num
-      data['player_racks'] = self.player_racks
-      data['player_scores'] = self.player_scores
       data['players'] = self.players
       data['pass_num'] = self.pass_num
       data['cur_play_mark'] = self.cur_play_mark
