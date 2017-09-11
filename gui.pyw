@@ -2,7 +2,7 @@
 from tkinter import *
 from tkinter.messagebox import askyesno
 
-from entry_page import EntryPage
+from lib.gui.entry_page import EntryPage
 
 class Root(Tk):
   def __init__(self, dic='./dics/sowpods.txt'):

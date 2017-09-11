@@ -4,13 +4,14 @@ from tkinter import *
 from tkinter.simpledialog import askstring
 from tkinter.filedialog import asksaveasfilename
 
-from tile import BoardTile, RackTile
+from lib.gui.tile import BoardTile, RackTile
 
 from lib.dic import Dict
 from lib.bag import Bag
 from lib.word import Word
 from lib.board import Board
 from lib.comp import AIOpponent
+from lib.player import Player
 
 class GamePage(Frame):
   def __init__(self, parent, options, dic='./dics/sowpods.txt'):
@@ -34,6 +35,7 @@ class GamePage(Frame):
     self.word = None
     self.start = None
     self.wild_tile = None
+    self.cur_player = None
     self.over = False
     self.time_up = False
     self.not_proceed = False
@@ -48,9 +50,6 @@ class GamePage(Frame):
     self.raw_word = []
     self.prev_words = []
     self.empty_tiles = []
-    self.new_letters = []
-    self.player_racks = []
-    self.player_scores = []
     self.letter_buffer = []
     self.old_letter_buffer = []
 
@@ -208,7 +207,7 @@ class GamePage(Frame):
     for w in word.words:
       mes = mes + ('{} {}\n'.format(w, word.words[w]))
 
-    if len(self.empty_tiles) == 7 or self.comp_mode and len(self.opponent.letters) == 0:
+    if self.cur_player.full_bonus:
       mes = mes + ('\nBonus 60\n')
 
     self.words_var.set(mes[:-1])
@@ -223,7 +222,7 @@ class GamePage(Frame):
 
     self.status_var.set('... Player\'s Turn ...')
     self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
-    self.pl2_var.set('Computer: {}'.format(self.player_scores[1]))
+    self.pl2_var.set('Computer: {}'.format(self.players[1].score))
 
   def reveal(self):
     for t in self.rack:
@@ -312,9 +311,6 @@ class GamePage(Frame):
         self.letter_buffer.append(tile)
 
   def initialize_game(self):
-    if self.comp_mode:
-      self.opponent = AIOpponent()
-
     if self.time_limit:
       self.countdown()
 
@@ -324,17 +320,18 @@ class GamePage(Frame):
 
   def initialize_players(self):
     for i in range(self.play_num):
-      self.player_scores.append(0)
+      pl = Player(self.players[i])
+      pl.draw_letters(self.bag)
+      self.players.append(pl)
 
-      rack = []
+      if self.comp_mode:
+        self.opponent = AIOpponent()
+        self.opponent.draw_letters()
+        self.players.append(self.opponent)
 
-      for j in range(7):
-        rack.append(self.bag.draw())
+        break
 
-      self.player_racks.append(rack)
-
-    if self.comp_mode:
-      self.opponent.letters = self.player_racks[1]
+    del self.players[:self.play_num]
 
     if self.loading:
       self.master.master.after(1000, self.load_game)
@@ -364,7 +361,7 @@ class GamePage(Frame):
     self.switch_player()
 
   def decorate_rack(self):
-    rack = self.player_racks[self.cur_play_mark]
+    rack = self.cur_player.letters
 
     for l, t in zip(rack, self.rack):
       if l == '@':
@@ -375,12 +372,16 @@ class GamePage(Frame):
       if self.norm_mode:
         t['fg'] = '#BE975B'
 
-  def update_racks(self):
-    self.player_racks[self.cur_play_mark] = [x.var.get() for x in self.rack]
+  def update_rack(self):
+    for rt, l in zip(self.rack, self.cur_player.letters):
+      rt.var.set(l)
+      rt['bg'] = '#BE975B'
 
   def switch_player(self):
     if self.norm_mode and not self.loading:
       self.cur_play_mark = (self.cur_play_mark + 1) % self.play_num
+
+    self.cur_player = self.players[self.cur_play_mark]
 
     self.loading = False
 
@@ -388,29 +389,18 @@ class GamePage(Frame):
     self.decorate_rack()
 
   def update_info(self):
-    self.status_var.set('... {}\'s Turn ...'.format(self.players[self.cur_play_mark]))
+    self.status_var.set('... {}\'s Turn ...'.format(self.cur_player.name))
 
-    self.pl1_var.set('{}: {}'.format(self.players[0], self.player_scores[0]))
-    self.pl2_var.set('{}: {}'.format(self.players[1], self.player_scores[1]))
+    self.pl1_var.set('{}: {}'.format(self.players[0].name, self.players[0].score))
+    self.pl2_var.set('{}: {}'.format(self.players[1].name, self.players[1].score))
 
     if self.play_num >= 3:
-      self.pl3_var.set('{}: {}'.format(self.players[2], self.player_scores[2]))
+      self.pl3_var.set('{}: {}'.format(self.players[2].name, self.players[2].score))
 
     if self.play_num == 4:
-      self.pl4_var.set('{}: {}'.format(self.players[3], self.player_scores[3]))
+      self.pl4_var.set('{}: {}'.format(self.players[3].name, self.players[3].score))
 
     self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
-
-  def draw_letters(self):
-    self.new_letters = []
-
-    for tile in self.empty_tiles:
-      tile.var.set(self.bag.draw())
-      tile['bg'] = '#BE975B'
-
-      self.new_letters.append(tile.var.get())
-
-    self.empty_tiles = []
 
   def get_ai_move(self):
     word = self.opponent.get_move(self.bag, self.board, self.dict)
@@ -430,15 +420,13 @@ class GamePage(Frame):
 
           del self.gui_board[s]
 
-      self.player_scores[1] += word.points
-
-      if len(self.opponent.letters) == 0:
-        self.player_scores[1] += 60
-
       self.set_word_info(word)
 
-      self.board.place(word.word, word.range)
       self.opponent.update_rack(self.bag)
+      self.opponent.update_score()
+      self.update_rack()
+
+      self.board.place(word.word, word.range)
 
     self.normalize_board()
 
@@ -450,7 +438,7 @@ class GamePage(Frame):
     for k, v in self.gui_board.items():
       self.gui_board[k].active = False
 
-    self.pl1_var.set('Player: {}'.format(self.player_scores[self.cur_play_mark]))
+    self.pl1_var.set('Player: {}'.format(self.cur_player.score))
     self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
     self.status_var.set('... Computer\'s Turn ...')
 
@@ -505,6 +493,8 @@ class GamePage(Frame):
         self.not_proceed = True
 
       if not self.not_proceed and self.word.validate():
+        self.cur_player.word = self.word
+
         self.pass_num = 0
         self.wild_tile = None
         self.prev_words = []
@@ -518,10 +508,9 @@ class GamePage(Frame):
 
         self.letters = {}
 
-        self.player_scores[self.cur_play_mark] += self.word.calculate_total_points()
-
-        if len(self.empty_tiles) == 7:
-          self.player_scores[self.cur_play_mark] += 60
+        self.cur_player.update_rack(self.bag)
+        self.cur_player.update_score()
+        self.update_rack()
 
         self.board.place(self.raw_word, self.sorted_keys)
 
@@ -530,8 +519,7 @@ class GamePage(Frame):
         self.prev_words.append(self.word.word)
         self.prev_words.extend([x[0] for x in self.word.extra_words])
 
-        self.draw_letters()
-        self.update_racks()
+        self.empty_tiles = []
 
         self.start = None
         self.old_letter_buffer = self.letter_buffer.copy()
@@ -651,6 +639,8 @@ class GamePage(Frame):
 
         self.letters[tile].var.set(ent.get().upper())
 
+        self.cur_player.wild_tile.append(ent.get().upper())
+
     ent.master.master.destroy()
 
   def add_letters_on_board(self, spot):
@@ -697,16 +687,12 @@ class GamePage(Frame):
 
     passed_letters = list(re.sub('[^A-Z@]', '', entry.get().upper()))
 
-    for tile in self.rack:
-      if tile.var.get() in passed_letters:
-        t = tile.var.get()
-        tile.var.set(self.bag.draw())
-        self.bag.put_back([t])
-        del passed_letters[passed_letters.index(t)]
+    self.cur_player.set_passed_letters(passed_letters)
 
     entry.master.master.destroy()
 
-    self.update_racks()
+    self.cur_player.update_rack(self.bag)
+    self.update_rack()
 
     self.pass_num += 1
 
@@ -719,12 +705,12 @@ class GamePage(Frame):
     if self.chal_mode:
       for word in self.prev_words:
         if not self.dict.valid_word(word):
-          self.player_scores[self.cur_play_mark - 1] -= self.word.points
+          self.players[self.cur_play_mark - 1].update_score(-self.word.points)
 
-          if len(self.new_letters) == 7:
-            self.player_scores[self.cur_play_mark - 1] -= 60
+          if len(self.cur_player.new_letters) == 7:
+            self.players[self.cur_play_mark - 1].update_score(-60)
 
-          for new in self.new_letters:
+          for new in self.cur_player.new_letters:
             self.player_racks[self.cur_play_mark - 1].remove(new)
             self.bag.put_back([new])
 
@@ -766,8 +752,8 @@ class GamePage(Frame):
     elif self.pass_num == 3 * self.play_num:
       self.end_game()
     elif self.point_limit:
-      for score in self.player_scores:
-        if score >= self.point_limit:
+      for pl in self.players:
+        if pl.score >= self.point_limit:
           self.end_game()
 
           return
@@ -779,10 +765,10 @@ class GamePage(Frame):
   def determine_winner(self):
     for i, rack in enumerate(self.player_racks):
       for l in rack:
-        self.player_scores[i] -= self.word.letter_points[l]
+        self.players[i].update_score(-self.word.letter_points[l])
 
-    pts = max(self.player_scores)
-    ply = self.players[self.player_scores.index(pts)]
+    pts = max([pl.score for pl in self.players])
+    ply = self.players[[pl.score for pl in self.players].index(pts)].name
 
     self.winner = (ply, pts)
 

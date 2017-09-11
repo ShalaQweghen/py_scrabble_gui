@@ -2,7 +2,7 @@ import random
 
 from tkinter import *
 
-from game_page import GamePage
+from lib.gui.game_page import GamePage
 
 class StartPage(Frame):
   def __init__(self, parent, dic='./dics/sowpods.txt'):
@@ -107,7 +107,7 @@ class NormalStartPage(StartPage):
                       '3 players': 3,
                       '4 players': 4}
 
-    pof = LabelFrame(self.opt_cont, text='# of Players', bg='azure', pady=10, padx=10)
+    pof = LabelFrame(self.opt_cont, bg='azure', pady=10, padx=10)
     pof.pack()
 
     for k, v in self.play_dict.items():

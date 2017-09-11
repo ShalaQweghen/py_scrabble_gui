@@ -6,52 +6,6 @@ class Board:
 		self._prepare_board()
 		self._place_bonus()
 
-	def display(self, output):
-		# Components of the board outline
-		t_line = u'\u2550\u2550\u2550\u2566'
-		m_line = u'\u2550\u2550\u2550\u256C'
-		b_line = u'\u2550\u2550\u2550\u2569'
-		hor, ver = u'\u2551', u'\u2550'
-		lcu, rcu = u'\u2554', u'\u2557'
-		lcm, rcm = u'\u2560', u'\u2563'
-		lcd, rcd = u'\u255A', u'\u255D'
-
-		row_number = 15
-
-		output.write('\n     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o\n')
-		output.write('   {}\n'.format(lcu + t_line * 14 + ver * 3 + rcu))
-
-		for row in self.rows:
-			if row_number < 10:
-				output.write('{}  '.format(row_number))
-			else:
-				output.write('{} '.format(row_number))
-
-			for spot in row:
-				if self.board[spot] == '3w':
-					output.write('{}\x1b[31m{} \x1b[00m'.format(hor, self.board[spot]))
-				elif self.board[spot] == '2w':
-					output.write('{}\x1b[35m{} \x1b[00m'.format(hor, self.board[spot]))
-				elif self.board[spot] == '3l':
-					output.write('{}\x1b[34m{} \x1b[00m'.format(hor, self.board[spot]))
-				elif self.board[spot] == '2l':
-					output.write('{}\x1b[36m{} \x1b[00m'.format(hor, self.board[spot]))
-				else:
-					output.write('{}\033[1m {} \033[0m'.format(hor, self.board[spot]))
-
-			output.write('{} {}\n'.format(hor, row_number))
-
-			row_number -= 1
-
-			if row_number > 0:
-				output.write('   {}\n'.format(lcm + m_line * 14 + ver * 3 + rcm))
-			else:
-				output.write('   {}\n'.format(lcd + b_line * 14 + ver * 3 + rcd))
-
-		output.write('     a   b   c   d   e   f   g   h   i   j   k   l   m   n   o\n')
-
-		output.flush()
-
 	def calculate_bonus(self, word_range):
 		bonus = {'word': {}, 'letter': {}}
 		for square in word_range:

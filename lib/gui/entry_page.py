@@ -3,8 +3,8 @@ import pickle, os
 from tkinter import *
 from tkinter.filedialog import askopenfilename
 
-from game_page import GamePage
-from start_page import NormalStartPage#, LANStartPage
+from lib.gui.game_page import GamePage
+from lib.gui.start_page import NormalStartPage#, LANStartPage
 
 class EntryPage(Frame):
   def __init__(self, parent, dic='./dics/sowpods.txt'):
