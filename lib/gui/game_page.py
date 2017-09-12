@@ -1,6 +1,7 @@
 import threading, re, os, pickle
 
 from tkinter import *
+from tkinter.messagebox import askyesno
 from tkinter.simpledialog import askstring
 from tkinter.filedialog import asksaveasfilename
 
@@ -34,6 +35,7 @@ class GamePage(Frame):
 
     self.word = None
     self.start = None
+    self.winner = None
     self.wild_tile = None
     self.cur_player = None
     self.wild_tile_clone = None
@@ -49,6 +51,7 @@ class GamePage(Frame):
     self.gui_board = {}
     self.used_spots = {}
     self.rack = []
+    self.losers = []
     self.raw_word = []
     self.prev_words = []
     self.empty_tiles = []
@@ -146,8 +149,11 @@ class GamePage(Frame):
     info_frame = Frame(self, bg='azure')
     info_frame.pack(side=LEFT, fill=BOTH)
 
+    self.sav = Button(info_frame, text='Save Game', command=self.save_game, bg='azure')
+    self.sav.pack(side=TOP, pady=90)
+
     f = Frame(info_frame, bg='azure')
-    f.pack(side=TOP, pady=200, fill=X)
+    f.pack(side=TOP, pady=50, fill=X)
 
     options = {'font': ('times', 15, 'italic'), 'bg': 'azure', 'fg': '#004d00'}
 
@@ -176,9 +182,6 @@ class GamePage(Frame):
     Label(f, text='Words:', **options).pack(anchor=NW, pady=10)
 
     Message(f, textvariable=self.words_var, font=('times', 14, 'italic'), anchor=NW, bg='azure', fg='#004d00').pack(anchor=NW, fill=X)
-
-    self.sav = Button(info_frame, text='Save Game', command=self.save_game)
-    self.sav.pack(side=BOTTOM, pady=30)
 
   def set_word_info(self, word):
     mes = ''
@@ -244,7 +247,7 @@ class GamePage(Frame):
     if self.time_limit:
       self.countdown()
 
-    self.master.master.after(1000, self.check_game_over)
+    self.check_game_over()
 
     self.initialize_players()
 
@@ -269,19 +272,20 @@ class GamePage(Frame):
       self.end_game()
 
   def initialize_players(self):
-    for i in range(self.play_num):
-      pl = Player(self.players[i])
-      pl.draw_letters(self.bag)
-      self.players.append(pl)
+    if not self.loading:
+      for i in range(self.play_num):
+        pl = Player(self.players[i])
+        pl.draw_letters(self.bag)
+        self.players.append(pl)
 
-      if self.comp_mode:
-        self.opponent = AIOpponent()
-        self.opponent.draw_letters(self.bag)
-        self.players.append(self.opponent)
+        if self.comp_mode:
+          self.opponent = AIOpponent()
+          self.opponent.draw_letters(self.bag)
+          self.players.append(self.opponent)
 
-        break
+          break
 
-    del self.players[:self.play_num]
+      del self.players[:self.play_num]
 
     if self.loading:
       self.master.master.after(1000, self.load_game)
@@ -336,16 +340,21 @@ class GamePage(Frame):
     self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
 
   def decorate_rack(self):
-    rack = self.cur_player.letters
-
-    for l, t in zip(rack, self.rack):
+    for l, t in zip(self.cur_player.letters, self.rack):
       if l == '@':
         t.letter.set(' ')
       else:
         t.letter.set(l)
 
+      t['bg'] = '#BE975B'
+
       if self.norm_mode:
         t['fg'] = '#BE975B'
+
+    if len(self.bag.bag) == 0:
+      for t in self.rack[len(self.cur_player.letters):]:
+        t.letter.set('')
+        t['bg'] = '#cccccc'
 
   def wait_comp(self):
     self.sub.config(state=DISABLED)
@@ -384,7 +393,7 @@ class GamePage(Frame):
 
       self.opponent.update_rack(self.bag)
       self.opponent.update_score()
-      self.update_rack()
+      self.decorate_rack()
 
       self.board.place(word.word, word.range)
 
@@ -394,6 +403,12 @@ class GamePage(Frame):
     for rt, l in zip(self.rack, self.cur_player.letters):
       rt.letter.set(l)
       rt['bg'] = '#BE975B'
+
+    if len(self.bag.bag) == 0:
+      for i, rt in enumerate(self.rack):
+        rt['bg'] = '#BE975B'
+        if i == len(self.cur_player.letters) - 1:
+          break
 
   def normalize_board(self):
     self.sub.config(state=NORMAL)
@@ -556,7 +571,7 @@ class GamePage(Frame):
 
         self.cur_player.update_rack(self.bag)
         self.cur_player.update_score()
-        self.update_rack()
+        self.decorate_rack()
 
         self.board.place(self.raw_word, self.sorted_keys)
 
@@ -643,22 +658,23 @@ class GamePage(Frame):
     return True
 
   def change_wild_tile(self, ent):
-    self.raw_word = re.sub(' ', ent.get().upper(), self.raw_word)
+    if re.fullmatch('[A-Z@]', ent.get().upper()):
+      self.raw_word = re.sub(' ', ent.get().upper(), self.raw_word)
 
-    for tile in self.letters:
-      if self.letters[tile].letter.get() == ' ':
-        self.wild_tile = self.letters[tile]
+      for tile in self.letters:
+        if self.letters[tile].letter.get() == ' ':
+          self.wild_tile = self.letters[tile]
 
-        if self.chal_mode:
-          self.wild_tile_clone = self.wild_tile
+          if self.chal_mode:
+            self.wild_tile_clone = self.wild_tile
 
-        self.board.wild_tiles_on_board.append(self.wild_tile.name)
+          self.board.wild_tiles_on_board.append(self.wild_tile.name)
 
-        self.letters[tile].letter.set(ent.get().upper())
+          self.letters[tile].letter.set(ent.get().upper())
 
-        self.cur_player.wild_tiles.append(ent.get().upper())
+          self.cur_player.wild_tiles.append(ent.get().upper())
 
-    ent.master.master.destroy()
+      ent.master.master.destroy()
 
   def pass_letters(self, entry):
     for key, value in self.gui_board.items():
@@ -677,7 +693,7 @@ class GamePage(Frame):
     entry.master.master.destroy()
 
     self.cur_player.update_rack(self.bag)
-    self.update_rack()
+    self.decorate_rack()
 
     self.pass_num += 1
 
@@ -721,9 +737,11 @@ class GamePage(Frame):
 
           self.update_info()
 
-          return
+          return True
 
       self.switch_player()
+
+      return False
 
   def check_game_over(self):
     if len(self.bag.bag) == 0:
@@ -748,17 +766,28 @@ class GamePage(Frame):
       self.master.master.after(1000, self.check_game_over)
 
   def end_game(self):
-    self.determine_winner()
-
-    if self.time_up:
-      rea = 'Time Is Up'
+    if self.chal_mode and len(self.bag.bag) == 0 and [pl for pl in self.players if len(pl.letters) == 0]:
+      challenged = askyesno('Challenge', 'Will you challenge any of \'{}\'?'.format(', '.join(self.prev_words))) and self.challenge()
     else:
-      rea = 'Game Is Over'
+      challenged = False
 
-    mes = '{} has won with {} points!'.format(self.winner[0], self.winner[1])
+    if not challenged:
+      self.determine_winner()
 
+      if self.time_up:
+        rea = 'Time Is Up'
+      else:
+        rea = 'Game Is Over'
+
+      mes = '{} has won with {} points!'.format(self.winner[0], self.winner[1])
+
+      self.show_end_game_popup(rea, mes)
+    else:
+      self.check_game_over()
+
+  def show_end_game_popup(self, reason, message):
     w = Toplevel(self)
-    w.title(rea)
+    w.title(reason)
 
     self.master.master.update()
     x = self.master.master.winfo_rootx() + 200
@@ -766,19 +795,35 @@ class GamePage(Frame):
 
     w.protocol('WM_DELETE_WINDOW', lambda: self.quit_game(w))
 
-    Label(w, text=mes, font=('times', 30, 'italic')).pack(side=TOP, padx=50, pady=30)
+    Label(w, text=message, font=('times', 30, 'italic')).pack(side=TOP, padx=50, pady=30)
 
-    Button(w, text='Quit', command=lambda: self.quit_game(w)).pack()
-    Button(w, text='Restart', command=self.restart_game).pack(pady=15)
+    f = Frame(w)
+    f.pack(side=TOP)
+
+    if not self.point_limit and not self.time_limit:
+      for pl, sub in self.losers:
+        if sub > 0:
+          Label(f, text='{} {} points for {} left on rack...'.format(pl.name, -sub, ', '.join(pl.letters))).pack(side=TOP)
+
+    bf = Frame(w)
+    bf.pack(side=TOP, pady=20)
+
+    Button(bf, text='Quit', command=lambda: self.quit_game(w)).pack(side=LEFT, padx=15)
+    Button(bf, text='Restart', command=self.restart_game).pack(side=LEFT)
 
     w.grab_set()
     w.focus_set()
     w.wait_window()
 
   def determine_winner(self):
-    for pl in self.players:
-      for l in pl.letters:
-        self.players[i].update_score(self.word.letter_points[l])
+    if not self.time_limit and not self.point_limit:
+      for pl in self.players:
+        sub = 0
+        for l in pl.letters:
+          sub += self.word.letter_points[l]
+          pl.update_score(self.word.letter_points[l])
+
+        self.losers.append((pl, sub))
 
     pts = max([pl.score for pl in self.players])
     ply = self.players[[pl.score for pl in self.players].index(pts)].name
