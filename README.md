@@ -12,7 +12,7 @@ Clone the game and enjoy it. If you have any feedbacks, I will very much appreci
 
 ### Start a game
 
-`cd` into py_scrabble_gui folder and run 'python3 py_scrabble.pyw'.
+`cd` into py_scrabble_gui folder and run `python3 py_scrabble.pyw`.
 
 Windows users can double click on `py_scrabble.pyw`.
 
