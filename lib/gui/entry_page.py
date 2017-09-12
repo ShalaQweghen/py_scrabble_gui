@@ -25,7 +25,7 @@ class EntryPage(Frame):
 
     Button(f, text='Start Computer Game', command=self.start_computer_game).pack(side=LEFT, padx=10)
     Button(f, text='Start Game on Computer', command=self.start_normal_game).pack(side=LEFT, padx=10)
-    Button(f, text='Start Game on LAN', command=lambda: self.go_to_frame('LANStartPage')).pack(side=LEFT, padx=10)
+    Button(f, text='Start Game on LAN', command=lambda: self.go_to_frame('LANStartPage'), state=DISABLED).pack(side=LEFT, padx=10)
 
     Button(self, text='Load Game', command=self.load_game).pack(side=TOP, pady=30)
 
