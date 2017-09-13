@@ -1,4 +1,4 @@
-import random
+import random, json, threading, socket
 
 from tkinter import *
 
@@ -62,41 +62,49 @@ class StartPage(Frame):
 
   def construct_options(self): pass
 
-#############################################################################
+############################################################################
 
-# class LANStartPage(StartPage):
-#   def draw_player_name(self):
-#     self.name_var = StringVar()
+class LANStartPage(StartPage):
+  def draw_player_options(self):
+    self.but_var.set('Start Game')
 
-#     f = Frame(self, bg='azure')
-#     f.pack(side=TOP, pady=20)
+    f = Frame(self.opt_cont, pady=10, bg='azure')
+    f.pack()
 
-#     Label(f, text='Enter Your Name:', bg='azure').pack(side=LEFT)
-#     Entry(f, textvariable=self.name_var).pack(side=LEFT)
+    self.name_var = StringVar()
 
-#   def draw_player_options(self):
-#     self.play_var = IntVar()
-#     self.play_dict = {'2 players': 2,
-#                       '3 players': 3,
-#                       '4 players': 4}
+    Label(f, text='Enter Your Name:', bg='azure').pack(side=LEFT)
 
-#     pof = LabelFrame(self.opt_cont, bg='azure', pady=10, padx=10)
-#     pof.pack(side=LEFT)
+    ent = Entry(f, textvariable=self.name_var)
+    ent.pack(side=LEFT)
 
-#     for k, v in self.play_dict.items():
-#       r = Radiobutton(pof, bg='azure', text=k, variable=self.play_var, value=v)
-#       r.pack(anchor=NW)
+    self.play_var = IntVar()
+    self.play_dict = {'2 players': 2,
+                      '3 players': 3,
+                      '4 players': 4}
 
-#     self.play_var.set(2)
+    pof = LabelFrame(self.opt_cont, bg='azure', pady=10, padx=10)
+    pof.pack()
 
-#   def construct_options(self):
-#     self.options['network_mode'] = True
-#     self.options['time_limit'] = self.time_var.get()
-#     self.options['player_name'] = self.play_var.get()
-#     self.options['players'] = self.play_var.get()
-#     self.options['challenge_mode'] = bool(self.chal_var.get())
+    for k, v in self.play_dict.items():
+      r = Radiobutton(pof, bg='azure', text=k, variable=self.play_var, value=v)
+      r.pack(anchor=NW)
 
-#############################################################################
+    self.play_var.set(2)
+
+  def construct_options(self):
+    self.options = {}
+    self.options['names'] = [self.name_var.get()]
+    self.options['lan_mode'] = True
+    self.options['time_limit'] = self.time_var.get()
+    self.options['players'] = self.play_var.get()
+    self.options['challenge_mode'] = bool(self.chal_var.get())
+    self.options['point_limit'] = self.point_var.get()
+
+    t = threading.Thread(target=self.create_server, args=())
+    t.start()
+
+############################################################################
 
 class NormalStartPage(StartPage):
   def draw_player_options(self):

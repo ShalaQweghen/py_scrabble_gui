@@ -1,10 +1,11 @@
-import pickle, os
+import pickle, os, json, socket, threading
 
 from tkinter import *
 from tkinter.filedialog import askopenfilename
+from tkinter.simpledialog import askstring
 
 from lib.gui.game_page import GamePage
-from lib.gui.start_page import NormalStartPage#, LANStartPage
+from lib.gui.start_page import NormalStartPage, LANStartPage
 
 class EntryPage(Frame):
   def __init__(self, parent, dic='./dics/sowpods.txt'):
@@ -25,9 +26,11 @@ class EntryPage(Frame):
 
     Button(f, text='Start Computer Game', command=self.start_computer_game).pack(side=LEFT, padx=10)
     Button(f, text='Start Game on Computer', command=self.start_normal_game).pack(side=LEFT, padx=10)
-    Button(f, text='Start Game on LAN', command=lambda: self.go_to_frame('LANStartPage'), state=DISABLED).pack(side=LEFT, padx=10)
+    Button(f, text='Start Game on LAN', command=self.start_lan_game).pack(side=LEFT, padx=10)
 
-    Button(self, text='Load Game', command=self.load_game).pack(side=TOP, pady=30)
+    Button(self, text='Join a LAN Game', command=self.join_game).pack(side=TOP, pady=20)
+
+    Button(self, text='Load Game', command=self.load_game).pack(side=TOP)
 
 
   def start_computer_game(self):
@@ -38,10 +41,17 @@ class EntryPage(Frame):
     page.tkraise()
 
   def start_normal_game(self):
-    self.parent.master.geometry("704x440")
-    self.parent.master.minsize(704, 440)
+    self.parent.master.geometry("704x460")
+    self.parent.master.minsize(704, 460)
 
     page = NormalStartPage(self.parent, self.dict)
+    page.tkraise()
+
+  def start_lan_game(self):
+    self.parent.master.geometry("704x450")
+    self.parent.master.minsize(704, 450)
+
+    page = LANStartPage(self.parent, self.dict)
     page.tkraise()
 
   def load_game(self):
@@ -73,6 +83,28 @@ class EntryPage(Frame):
       game.op_score = data['op_score']
       game.seconds = data['seconds']
       game.minutes = data['minutes']
+
+  def join_game(self):
+    self.name = askstring('Enter Name', 'Enter Your Name:')
+
+    t = threading.Thread(target=self.connect, args=())
+    t.start()
+
+  def connect(self):
+    host = '127.0.0.1'
+    port = 11235
+
+    sock = socket.socket()
+    sock.connect((host, port))
+
+    print('Connected to {}'.format(host))
+
+    sock.sendall(self.name.encode('utf-8'))
+
+    options = sock.recv(1024)
+    GamePage(self.parent, json.loads(options), self.dict)
+
+    sock.close()
 
 
 

@@ -1,4 +1,4 @@
-import threading, re, os, pickle
+import threading, re, os, pickle, socket, queue, random, yaml
 
 from tkinter import *
 from tkinter.messagebox import askyesno
@@ -33,6 +33,9 @@ class GamePage(Frame):
 
     self.minutes = self.time_limit
 
+    self.queue = queue.Queue()
+
+    self.ser = None
     self.word = None
     self.start = None
     self.winner = None
@@ -41,6 +44,7 @@ class GamePage(Frame):
     self.wild_tile_clone = None
     self.over = False
     self.time_up = False
+    self.game_online = True
     self.may_proceed = True
     self.changing_wild_tile = False
     self.seconds = 0
@@ -53,8 +57,11 @@ class GamePage(Frame):
     self.rack = []
     self.losers = []
     self.raw_word = []
+    self.word_info = []
     self.prev_words = []
+    self.play_winfo = []
     self.empty_tiles = []
+    self.lan_players = []
     self.letter_buffer = []
     self.old_letter_buffer = []
 
@@ -183,11 +190,11 @@ class GamePage(Frame):
 
     Message(f, textvariable=self.words_var, font=('times', 14, 'italic'), anchor=NW, bg='azure', fg='#004d00').pack(anchor=NW, fill=X)
 
-  def set_word_info(self, word):
+  def set_word_info(self, words):
     mes = ''
 
-    for w in word.words:
-      mes = mes + ('{} {}\n'.format(w, word.words[w]))
+    for w in words:
+      mes = mes + ('{} {}\n'.format(w, words[w]))
 
     if self.cur_player.full_bonus:
       mes = mes + ('\nBonus 60\n')
@@ -249,7 +256,10 @@ class GamePage(Frame):
 
     self.check_game_over()
 
-    self.initialize_players()
+    if self.lan_mode:
+      self.create_server()
+    else:
+      self.initialize_players()
 
   def countdown(self):
     if self.seconds == 0:
@@ -270,6 +280,48 @@ class GamePage(Frame):
       self.time_up = True
 
       self.end_game()
+
+  def create_server(self):
+    self.ser = socket.socket()
+
+    self.ser.bind(('', 11235))
+    self.ser.listen()
+
+    print('\nServer up and running...\n')
+
+    for i in range(1, self.play_num):
+      cli, addr = self.ser.accept()
+      self.lan_players.append(cli)
+      name = cli.recv(1024)
+      self.players.append(name.decode('utf-8'))
+      self.options['names'].append(name.decode('utf-8'))
+
+      print('Connected by {}'.format(addr))
+
+    options = yaml.dump(self.options)
+
+    for pl in self.lan_players:
+      pl.sendall(str.encode(options))
+
+    self.initialize_players()
+
+    for st in self.lan_players:
+      st.sendall(str.encode(yaml.dump(self.players)))
+
+    while self.game_online:
+      if self.cur_play_mark != 0:
+        source = self.lan_players[self.cur_play_mark]
+        word = source.recv(1024)
+
+        self.word = yaml.safe_load(word)
+
+        for i, st in self.lan_players:
+          st.sendall(word)
+
+
+
+    self.ser.close()
+
 
   def initialize_players(self):
     if not self.loading:
@@ -389,7 +441,7 @@ class GamePage(Frame):
 
           del self.gui_board[s]
 
-      self.set_word_info(word)
+      self.set_word_info(word.words)
 
       self.opponent.update_rack(self.bag)
       self.opponent.update_score()
@@ -575,7 +627,7 @@ class GamePage(Frame):
 
         self.board.place(self.raw_word, self.sorted_keys)
 
-        self.set_word_info(self.word)
+        self.set_word_info(self.word.words)
 
         self.prev_words.append(self.word.word)
         self.prev_words.extend([x[0] for x in self.word.extra_words])
@@ -865,4 +917,5 @@ class GamePage(Frame):
 
       file = open(filename, 'wb')
       pickle.dump(data, file)
+
 
