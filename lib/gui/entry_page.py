@@ -85,26 +85,7 @@ class EntryPage(Frame):
       game.minutes = data['minutes']
 
   def join_game(self):
-    self.name = askstring('Enter Name', 'Enter Your Name:')
-
-    t = threading.Thread(target=self.connect, args=())
-    t.start()
-
-  def connect(self):
-    host = '127.0.0.1'
-    port = 11235
-
-    sock = socket.socket()
-    sock.connect((host, port))
-
-    print('Connected to {}'.format(host))
-
-    sock.sendall(self.name.encode('utf-8'))
-
-    options = sock.recv(1024)
-    GamePage(self.parent, json.loads(options), self.dict)
-
-    sock.close()
-
+    name = askstring('Enter Name', 'Enter your name:')
+    GamePage(self.parent, {'names': [name]})
 
 

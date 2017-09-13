@@ -1,4 +1,4 @@
-import random, json, threading, socket
+import random
 
 from tkinter import *
 
@@ -100,9 +100,7 @@ class LANStartPage(StartPage):
     self.options['players'] = self.play_var.get()
     self.options['challenge_mode'] = bool(self.chal_var.get())
     self.options['point_limit'] = self.point_var.get()
-
-    t = threading.Thread(target=self.create_server, args=())
-    t.start()
+    GamePage(self.parent, self.options)
 
 ############################################################################
 

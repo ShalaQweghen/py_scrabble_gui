@@ -1,5 +1,4 @@
-import threading, re, os, pickle, socket, queue, random, yaml
-
+import threading, re, os, pickle, socket, queue, random
 from tkinter import *
 from tkinter.messagebox import askyesno
 from tkinter.simpledialog import askstring
@@ -16,25 +15,24 @@ from lib.player import Player
 
 class GamePage(Frame):
   def __init__(self, parent, options, dic='./dics/sowpods.txt'):
+    Frame.__init__(self, parent, bg='azure')
+    self.grid(row=0, column=0, sticky=S+N+E+W)
+
     self.dict = Dict(dic)
     self.bag = Bag()
     self.board = Board()
 
-    self.options = options
-    self.chal_mode = self.options.get('challenge_mode', False)
-    self.comp_mode = self.options.get('comp_mode', False)
-    self.norm_mode = self.options.get('normal_mode', False)
-    self.lan_mode = self.options.get('lan_mode', False)
-    self.time_limit = self.options.get('time_limit', 0)
-    self.point_limit = self.options.get('point_limit', 0)
-    self.players = self.options.get('names', [])
-    self.play_num = self.options.get('players', 0)
-    self.loading = self.options.get('loading', False)
+    if options.get('players', False):
+      self.resolve_options(options)
+      self.set_variables()
+      self.draw_main_frame()
+      self.draw_info_frame()
+      self.initialize_game()
+    else:
+      t = threading.Thread(target=self.handle_lan_game, args=(options,))
+      t.start()
 
-    self.minutes = self.time_limit
-
-    self.queue = queue.Queue()
-
+  def set_variables(self):
     self.ser = None
     self.word = None
     self.start = None
@@ -65,17 +63,10 @@ class GamePage(Frame):
     self.letter_buffer = []
     self.old_letter_buffer = []
 
-    Frame.__init__(self, parent, bg='azure')
-    self.grid(row=0, column=0, sticky=S+N+E+W)
-
     self.bag_var = StringVar()
     self.time_var = StringVar()
     self.status_var = StringVar()
     self.words_var = StringVar()
-
-    self.draw_main_frame()
-    self.draw_info_frame()
-    self.initialize_game()
 
   def draw_main_frame(self):
     out_f = Frame(self, padx=30, bg='azure')
@@ -256,8 +247,9 @@ class GamePage(Frame):
 
     self.check_game_over()
 
-    if self.lan_mode:
-      self.create_server()
+    if self.lan_mode and not self.joined_lan:
+      t = threading.Thread(target=self.create_server())
+      t.start()
     else:
       self.initialize_players()
 
@@ -281,7 +273,66 @@ class GamePage(Frame):
 
       self.end_game()
 
+  def resolve_options(self, options):
+    self.options = options
+    self.chal_mode = self.options.get('challenge_mode', False)
+    self.comp_mode = self.options.get('comp_mode', False)
+    self.norm_mode = self.options.get('normal_mode', False)
+    self.lan_mode = self.options.get('lan_mode', False)
+    self.time_limit = self.options.get('time_limit', 0)
+    self.point_limit = self.options.get('point_limit', 0)
+    self.players = self.options.get('names', [])
+    self.play_num = self.options.get('players', 0)
+    self.loading = self.options.get('loading', False)
+    self.joined_lan = self.options.get('joined', False)
+
+    self.minutes = self.time_limit
+
+
+  def handle_lan_game(self, options):
+    host = '127.0.0.1'
+    port = 11235
+
+    sock = socket.socket()
+    sock.connect((host, port))
+
+    print('Connected to {}'.format(host))
+
+    sock.sendall(pickle.dumps(options['names'][0]))
+
+    options, self.mark = pickle.loads(sock.recv(1024))
+    options = pickle.loads(options)
+    options['joined'] = True
+
+    self.resolve_options(options)
+    self.set_variables()
+    self.draw_main_frame()
+    self.draw_info_frame()
+
+    players = pickle.loads(sock.recv(1024))
+    self.players = players
+
+    self.initialize_game()
+
+    while self.game_online:
+      if self.mark == self.cur_play_mark:
+        if not self.word:
+          self.enable_board()
+
+        if self.word:
+          sock.sendall(pickle.dumps(self.word))
+      else:
+        word = pickle.loads(sock.recv(1024))
+        self.word = word
+
+        players = pickle.loads(sock.recv(1024))
+        self.players = players
+
+        self.process_word()
+
   def create_server(self):
+    self.mark = 0
+
     self.ser = socket.socket()
 
     self.ser.bind(('', 11235))
@@ -293,38 +344,44 @@ class GamePage(Frame):
       cli, addr = self.ser.accept()
       self.lan_players.append(cli)
       name = cli.recv(1024)
-      self.players.append(name.decode('utf-8'))
-      self.options['names'].append(name.decode('utf-8'))
+      name = pickle.loads(name)
+      self.options['names'].append(name)
 
       print('Connected by {}'.format(addr))
 
-    options = yaml.dump(self.options)
+    options = pickle.dumps(self.options)
 
-    for pl in self.lan_players:
-      pl.sendall(str.encode(options))
+    for i, pl in enumerate(self.lan_players):
+      pl.sendall(pickle.dumps((options, i + 1)))
 
     self.initialize_players()
 
     for st in self.lan_players:
-      st.sendall(str.encode(yaml.dump(self.players)))
+      st.sendall(pickle.dumps(self.players))
 
     while self.game_online:
       if self.cur_play_mark != 0:
+        self.disable_board()
+
         source = self.lan_players[self.cur_play_mark]
         word = source.recv(1024)
 
-        self.word = yaml.safe_load(word)
+        self.word = pickle.loads(word)
 
-        for i, st in self.lan_players:
-          st.sendall(word)
+        for st in self.lan_players:
+          st.sendall(pickle.dumps(word))
 
+        self.process_word()
 
+        for st in self.lan_players:
+          st.sendall(pickle.dumps(self.players))
+      else:
+        self.enable_board()
 
     self.ser.close()
 
-
   def initialize_players(self):
-    if not self.loading:
+    if not self.loading and not self.joined_lan:
       for i in range(self.play_num):
         pl = Player(self.players[i])
         pl.draw_letters(self.bag)
@@ -367,6 +424,8 @@ class GamePage(Frame):
     self.switch_player()
 
   def switch_player(self):
+    self.word = None
+
     if self.norm_mode and not self.loading:
       self.cur_play_mark = (self.cur_play_mark + 1) % self.play_num
 
@@ -408,13 +467,24 @@ class GamePage(Frame):
         t.letter.set('')
         t['bg'] = '#cccccc'
 
-  def wait_comp(self):
+  def disable_board(self):
     self.sub.config(state=DISABLED)
     self.pas.config(state=DISABLED)
     self.sav.config(state=DISABLED)
 
     for k, v in self.gui_board.items():
       self.gui_board[k].active = False
+
+  def enable_board(self):
+    self.sub.config(state=NORMAL)
+    self.pas.config(state=NORMAL)
+    self.sav.config(state=NORMAL)
+
+    for k, v in self.gui_board.items():
+      self.gui_board[k].active = True
+
+  def wait_comp(self):
+    self.disable_board()
 
     self.pl1_var.set('Player: {}'.format(self.cur_player.score))
     self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
@@ -463,12 +533,7 @@ class GamePage(Frame):
           break
 
   def normalize_board(self):
-    self.sub.config(state=NORMAL)
-    self.pas.config(state=NORMAL)
-    self.sav.config(state=NORMAL)
-
-    for k, v in self.gui_board.items():
-      self.gui_board[k].active = True
+    self.enable_board()
 
     self.status_var.set('... Player\'s Turn ...')
     self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
@@ -558,52 +623,53 @@ class GamePage(Frame):
 
   def process_word(self):
     if self.letters:
-      self.sorted_keys = sorted(self.letters)
+      if not self.lan_mode or self.mark == self.cur_play_mark:
+        self.sorted_keys = sorted(self.letters)
 
-      self.raw_word = []
-      check1 = self.sorted_keys[0][0]
-      check2 = self.sorted_keys[-1][0]
+        self.raw_word = []
+        check1 = self.sorted_keys[0][0]
+        check2 = self.sorted_keys[-1][0]
 
-      if check1 == check2:
-        digits = sorted([int(x[1:]) for x in self.sorted_keys])
-        self.sorted_keys = [check1 + str(x) for x in digits]
-        self.sorted_keys.reverse()
+        if check1 == check2:
+          digits = sorted([int(x[1:]) for x in self.sorted_keys])
+          self.sorted_keys = [check1 + str(x) for x in digits]
+          self.sorted_keys.reverse()
 
-        self.direction = 'd'
-      else:
-        self.direction = 'r'
+          self.direction = 'd'
+        else:
+          self.direction = 'r'
 
-      self.aob_list = []
+        self.aob_list = []
 
-      for key in self.sorted_keys:
-        self.raw_word.append(self.letters[key].letter.get())
-        self.set_aob_list(key)
+        for key in self.sorted_keys:
+          self.raw_word.append(self.letters[key].letter.get())
+          self.set_aob_list(key)
 
-      offset = 0
-      length = len(self.sorted_keys)
+        offset = 0
+        length = len(self.sorted_keys)
 
-      for spot, index, letter in self.aob_list:
-        if index < 0:
-          index = 0
-        elif index > length:
-          index = length - 1
+        for spot, index, letter in self.aob_list:
+          if index < 0:
+            index = 0
+          elif index > length:
+            index = length - 1
 
-        self.raw_word.insert(index + offset, letter)
-        self.sorted_keys.insert(index + offset, spot)
+          self.raw_word.insert(index + offset, letter)
+          self.sorted_keys.insert(index + offset, spot)
 
-        offset += 1
+          offset += 1
 
-      self.raw_word = ''.join(self.raw_word)
+        self.raw_word = ''.join(self.raw_word)
 
-      if ' ' in self.raw_word:
-        self.show_popup('Set Wild Tile', 'Enter a letter:', 'Set', self.change_wild_tile)
+        if ' ' in self.raw_word:
+          self.show_popup('Set Wild Tile', 'Enter a letter:', 'Set', self.change_wild_tile)
 
-      self.word = Word(self.sorted_keys[0], self.direction, self.raw_word, self.board, self.dict, self.chal_mode)
+        self.word = Word(self.sorted_keys[0], self.direction, self.raw_word, self.board, self.dict, self.chal_mode)
 
-      self.word.set_aob_list([x[2] for x in self.aob_list])
+        self.word.set_aob_list([x[2] for x in self.aob_list])
 
-      if not self.valid_sorted_letters():
-        self.may_proceed = False
+        if not self.valid_sorted_letters():
+          self.may_proceed = False
 
       if self.may_proceed and self.word.validate():
         self.cur_player.word = self.word
