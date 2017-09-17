@@ -41,6 +41,7 @@ class GamePage(Frame):
     self.cur_player = None
     self.wild_tile_clone = None
     self.over = False
+    self.abled = True
     self.time_up = False
     self.game_online = True
     self.may_proceed = True
@@ -55,18 +56,35 @@ class GamePage(Frame):
     self.rack = []
     self.losers = []
     self.raw_word = []
+    self.lan_players = []
     self.word_info = []
     self.prev_words = []
     self.play_winfo = []
     self.empty_tiles = []
-    self.lan_players = []
     self.letter_buffer = []
     self.old_letter_buffer = []
+
+    self.queue = queue.Queue()
 
     self.bag_var = StringVar()
     self.time_var = StringVar()
     self.status_var = StringVar()
     self.words_var = StringVar()
+
+  def resolve_options(self, options):
+    self.options = options
+    self.chal_mode = self.options.get('challenge_mode', False)
+    self.comp_mode = self.options.get('comp_mode', False)
+    self.norm_mode = self.options.get('normal_mode', False)
+    self.lan_mode = self.options.get('lan_mode', False)
+    self.time_limit = self.options.get('time_limit', 0)
+    self.point_limit = self.options.get('point_limit', 0)
+    self.players = self.options.get('names', [])
+    self.play_num = self.options.get('players', 0)
+    self.loading = self.options.get('loading', False)
+    self.joined_lan = self.options.get('joined', False)
+
+    self.minutes = self.time_limit
 
   def draw_main_frame(self):
     out_f = Frame(self, padx=30, bg='azure')
@@ -248,7 +266,7 @@ class GamePage(Frame):
     self.check_game_over()
 
     if self.lan_mode and not self.joined_lan:
-      t = threading.Thread(target=self.create_server())
+      t = threading.Thread(target=self.create_server)
       t.start()
     else:
       self.initialize_players()
@@ -273,22 +291,6 @@ class GamePage(Frame):
 
       self.end_game()
 
-  def resolve_options(self, options):
-    self.options = options
-    self.chal_mode = self.options.get('challenge_mode', False)
-    self.comp_mode = self.options.get('comp_mode', False)
-    self.norm_mode = self.options.get('normal_mode', False)
-    self.lan_mode = self.options.get('lan_mode', False)
-    self.time_limit = self.options.get('time_limit', 0)
-    self.point_limit = self.options.get('point_limit', 0)
-    self.players = self.options.get('names', [])
-    self.play_num = self.options.get('players', 0)
-    self.loading = self.options.get('loading', False)
-    self.joined_lan = self.options.get('joined', False)
-
-    self.minutes = self.time_limit
-
-
   def handle_lan_game(self, options):
     host = '127.0.0.1'
     port = 11235
@@ -301,6 +303,9 @@ class GamePage(Frame):
     sock.sendall(pickle.dumps(options['names'][0]))
 
     options, self.mark = pickle.loads(sock.recv(1024))
+
+    self.mark += 1
+
     options = pickle.loads(options)
     options['joined'] = True
 
@@ -361,7 +366,9 @@ class GamePage(Frame):
 
     while self.game_online:
       if self.cur_play_mark != 0:
-        self.disable_board()
+        if self.abled:
+          self.abled = False
+          self.disable_board()
 
         source = self.lan_players[self.cur_play_mark]
         word = source.recv(1024)
@@ -375,7 +382,8 @@ class GamePage(Frame):
 
         for st in self.lan_players:
           st.sendall(pickle.dumps(self.players))
-      else:
+      elif not self.abled:
+        self.abled = True
         self.enable_board()
 
     self.ser.close()
@@ -704,7 +712,7 @@ class GamePage(Frame):
         self.old_letter_buffer = self.letter_buffer.copy()
         self.letter_buffer = []
 
-        if self.norm_mode:
+        if self.norm_mode or self.lan_mode or self.joined_lan:
           self.switch_player()
         else:
           self.wait_comp()

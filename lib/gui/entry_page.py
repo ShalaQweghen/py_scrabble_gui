@@ -86,6 +86,9 @@ class EntryPage(Frame):
 
   def join_game(self):
     name = askstring('Enter Name', 'Enter your name:')
+
+    self.parent.master.geometry('750x785')
+    self.parent.master.minsize(750, 785)
     GamePage(self.parent, {'names': [name]})
 
 

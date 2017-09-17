@@ -100,6 +100,9 @@ class LANStartPage(StartPage):
     self.options['players'] = self.play_var.get()
     self.options['challenge_mode'] = bool(self.chal_var.get())
     self.options['point_limit'] = self.point_var.get()
+
+    self.parent.master.geometry('750x785')
+    self.parent.master.minsize(750, 785)
     GamePage(self.parent, self.options)
 
 ############################################################################
