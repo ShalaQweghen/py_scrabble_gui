@@ -46,6 +46,7 @@ class GamePage(Frame):
     self.game_online = True
     self.may_proceed = True
     self.changing_wild_tile = False
+    self.mark = 0
     self.seconds = 0
     self.op_score = 0
     self.pass_num = 0
@@ -56,7 +57,6 @@ class GamePage(Frame):
     self.rack = []
     self.losers = []
     self.raw_word = []
-    self.lan_players = []
     self.word_info = []
     self.prev_words = []
     self.play_winfo = []
@@ -266,7 +266,7 @@ class GamePage(Frame):
     self.check_game_over()
 
     if self.lan_mode and not self.joined_lan:
-      t = threading.Thread(target=self.create_server)
+      t = threading.Thread(target=self.create_server, args=(self.options, self.queue, self.bag))
       t.start()
     else:
       self.initialize_players()
@@ -291,103 +291,6 @@ class GamePage(Frame):
 
       self.end_game()
 
-  def handle_lan_game(self, options):
-    host = '127.0.0.1'
-    port = 11235
-
-    sock = socket.socket()
-    sock.connect((host, port))
-
-    print('Connected to {}'.format(host))
-
-    sock.sendall(pickle.dumps(options['names'][0]))
-
-    options, self.mark = pickle.loads(sock.recv(1024))
-
-    self.mark += 1
-
-    options = pickle.loads(options)
-    options['joined'] = True
-
-    self.resolve_options(options)
-    self.set_variables()
-    self.draw_main_frame()
-    self.draw_info_frame()
-
-    players = pickle.loads(sock.recv(1024))
-    self.players = players
-
-    self.initialize_game()
-
-    while self.game_online:
-      if self.mark == self.cur_play_mark:
-        if not self.word:
-          self.enable_board()
-
-        if self.word:
-          sock.sendall(pickle.dumps(self.word))
-      else:
-        word = pickle.loads(sock.recv(1024))
-        self.word = word
-
-        players = pickle.loads(sock.recv(1024))
-        self.players = players
-
-        self.process_word()
-
-  def create_server(self):
-    self.mark = 0
-
-    self.ser = socket.socket()
-
-    self.ser.bind(('', 11235))
-    self.ser.listen()
-
-    print('\nServer up and running...\n')
-
-    for i in range(1, self.play_num):
-      cli, addr = self.ser.accept()
-      self.lan_players.append(cli)
-      name = cli.recv(1024)
-      name = pickle.loads(name)
-      self.options['names'].append(name)
-
-      print('Connected by {}'.format(addr))
-
-    options = pickle.dumps(self.options)
-
-    for i, pl in enumerate(self.lan_players):
-      pl.sendall(pickle.dumps((options, i + 1)))
-
-    self.initialize_players()
-
-    for st in self.lan_players:
-      st.sendall(pickle.dumps(self.players))
-
-    while self.game_online:
-      if self.cur_play_mark != 0:
-        if self.abled:
-          self.abled = False
-          self.disable_board()
-
-        source = self.lan_players[self.cur_play_mark]
-        word = source.recv(1024)
-
-        self.word = pickle.loads(word)
-
-        for st in self.lan_players:
-          st.sendall(pickle.dumps(word))
-
-        self.process_word()
-
-        for st in self.lan_players:
-          st.sendall(pickle.dumps(self.players))
-      elif not self.abled:
-        self.abled = True
-        self.enable_board()
-
-    self.ser.close()
-
   def initialize_players(self):
     if not self.loading and not self.joined_lan:
       for i in range(self.play_num):
@@ -403,6 +306,8 @@ class GamePage(Frame):
           break
 
       del self.players[:self.play_num]
+
+      self.queue.put(self.players)
 
     if self.loading:
       self.master.master.after(1000, self.load_game)
