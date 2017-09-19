@@ -271,6 +271,64 @@ class GamePage(Frame):
     else:
       self.initialize_players()
 
+  def create_server(self, options, queue, bag):
+    mark = 0
+    cur_play_mark = 0
+    lan_players = []
+    abled = True
+    game_online = True
+
+    ser = socket.socket()
+
+    ser.bind(('', 11235))
+    ser.listen()
+
+    print('\nServer up and running...\n')
+
+    for i in range(1, options['players']):
+      cli, addr = ser.accept()
+      lan_players.append(cli)
+      name = cli.recv(1024)
+      name = pickle.loads(name)
+      options['names'].append(name)
+
+      print('Connected by {}'.format(addr))
+
+    options = pickle.dumps(options)
+
+    for i, pl in enumerate(lan_players):
+      pl.sendall(pickle.dumps((options, i + 1)))
+
+    self.initialize_players()
+
+    for st in lan_players:
+      st.sendall(pickle.dumps((players, bag)))
+
+    while game_online:
+      if cur_play_mark != 0:
+        source = lan_players[cur_play_mark]
+        word = source.recv(1024)
+
+        word = pickle.loads(word)
+
+        for st in lan_players:
+          st.sendall(pickle.dumps(word))
+
+        queue.put(word)
+
+        for st in lan_players:
+          st.sendall(pickle.dumps(players))
+        cur_play_mark = (cur_play_mark + 1) % options['players']
+      else:
+        word = queue.get()
+
+        for st in lan_players:
+          st.sendall(pickle.dumps(word))
+          
+        cur_play_mark = (cur_play_mark + 1) % options['players']
+
+    ser.close()
+
   def countdown(self):
     if self.seconds == 0:
       self.seconds = 59
@@ -337,6 +395,13 @@ class GamePage(Frame):
     self.switch_player()
 
   def switch_player(self):
+    if self.lan_mode and not self.joined_lan:
+      if self.mark == self.cur_play_mark and self.word:
+        self.disable_board()
+        self.queue.put(self.word)
+      else:
+        self.enable_board()
+
     self.word = None
 
     if self.norm_mode and not self.loading:
@@ -348,6 +413,9 @@ class GamePage(Frame):
 
     self.update_info()
     self.decorate_rack()
+
+    if self.lan_mode and not self.joined_lan and self.mark != self.cur_play_mark:
+      self.process_word()
 
   def update_info(self):
     self.status_var.set('... {}\'s Turn ...'.format(self.cur_player.name))
@@ -535,98 +603,100 @@ class GamePage(Frame):
         self.letter_buffer.append(tile)
 
   def process_word(self):
-    if self.letters:
-      if not self.lan_mode or self.mark == self.cur_play_mark:
-        self.sorted_keys = sorted(self.letters)
+    if self.lan_mode and not self.joined_lan and self.mark != self.cur_play_mark:
+      self.word = self.queue.get()
+    elif self.letters:
+      self.sorted_keys = sorted(self.letters)
 
-        self.raw_word = []
-        check1 = self.sorted_keys[0][0]
-        check2 = self.sorted_keys[-1][0]
+      self.raw_word = []
+      check1 = self.sorted_keys[0][0]
+      check2 = self.sorted_keys[-1][0]
 
-        if check1 == check2:
-          digits = sorted([int(x[1:]) for x in self.sorted_keys])
-          self.sorted_keys = [check1 + str(x) for x in digits]
-          self.sorted_keys.reverse()
+      if check1 == check2:
+        digits = sorted([int(x[1:]) for x in self.sorted_keys])
+        self.sorted_keys = [check1 + str(x) for x in digits]
+        self.sorted_keys.reverse()
 
-          self.direction = 'd'
-        else:
-          self.direction = 'r'
-
-        self.aob_list = []
-
-        for key in self.sorted_keys:
-          self.raw_word.append(self.letters[key].letter.get())
-          self.set_aob_list(key)
-
-        offset = 0
-        length = len(self.sorted_keys)
-
-        for spot, index, letter in self.aob_list:
-          if index < 0:
-            index = 0
-          elif index > length:
-            index = length - 1
-
-          self.raw_word.insert(index + offset, letter)
-          self.sorted_keys.insert(index + offset, spot)
-
-          offset += 1
-
-        self.raw_word = ''.join(self.raw_word)
-
-        if ' ' in self.raw_word:
-          self.show_popup('Set Wild Tile', 'Enter a letter:', 'Set', self.change_wild_tile)
-
-        self.word = Word(self.sorted_keys[0], self.direction, self.raw_word, self.board, self.dict, self.chal_mode)
-
-        self.word.set_aob_list([x[2] for x in self.aob_list])
-
-        if not self.valid_sorted_letters():
-          self.may_proceed = False
-
-      if self.may_proceed and self.word.validate():
-        self.cur_player.word = self.word
-
-        self.pass_num = 0
-        self.wild_tile = None
-        self.prev_words = []
-
-        for key in self.sorted_keys:
-          if key in self.letters:
-            self.letters[key].active = False
-            self.used_spots[key] = self.gui_board[key]
-
-            del self.gui_board[key]
-
-        self.letters = {}
-
-        self.cur_player.update_rack(self.bag)
-        self.cur_player.update_score()
-        self.decorate_rack()
-
-        self.board.place(self.raw_word, self.sorted_keys)
-
-        self.set_word_info(self.word.words)
-
-        self.prev_words.append(self.word.word)
-        self.prev_words.extend([x[0] for x in self.word.extra_words])
-
-        self.empty_tiles = []
-
-        self.start = None
-        self.old_letter_buffer = self.letter_buffer.copy()
-        self.letter_buffer = []
-
-        if self.norm_mode or self.lan_mode or self.joined_lan:
-          self.switch_player()
-        else:
-          self.wait_comp()
+        self.direction = 'd'
       else:
-        if self.wild_tile:
-          self.wild_tile.letter.set(' ')
-          self.wild_tile = None
+        self.direction = 'r'
 
-        self.may_proceed = True
+      self.aob_list = []
+
+      for key in self.sorted_keys:
+        self.raw_word.append(self.letters[key].letter.get())
+        self.set_aob_list(key)
+
+      offset = 0
+      length = len(self.sorted_keys)
+
+      for spot, index, letter in self.aob_list:
+        if index < 0:
+          index = 0
+        elif index > length:
+          index = length - 1
+
+        self.raw_word.insert(index + offset, letter)
+        self.sorted_keys.insert(index + offset, spot)
+
+        offset += 1
+
+      self.raw_word = ''.join(self.raw_word)
+
+      if ' ' in self.raw_word:
+        self.show_popup('Set Wild Tile', 'Enter a letter:', 'Set', self.change_wild_tile)
+
+      self.word = Word(self.sorted_keys[0], self.direction, self.raw_word, self.board, self.dict, self.chal_mode)
+
+      self.word.set_aob_list([x[2] for x in self.aob_list])
+
+      if not self.valid_sorted_letters():
+        self.may_proceed = False
+
+    if self.may_proceed and self.word.validate():
+      self.cur_player.word = self.word
+
+      self.pass_num = 0
+      self.wild_tile = None
+      self.prev_words = []
+
+      for key in self.sorted_keys:
+        if key in self.letters:
+          self.letters[key].active = False
+          self.used_spots[key] = self.gui_board[key]
+
+          del self.gui_board[key]
+
+      self.letters = {}
+
+      self.cur_player.update_rack(self.bag)
+      self.cur_player.update_score()
+      self.decorate_rack()
+
+      self.board.place(self.raw_word, self.sorted_keys)
+
+      self.set_word_info(self.word.words)
+
+      self.prev_words.append(self.word.word)
+      self.prev_words.extend([x[0] for x in self.word.extra_words])
+
+      self.empty_tiles = []
+
+      self.start = None
+      self.old_letter_buffer = self.letter_buffer.copy()
+      self.letter_buffer = []
+
+
+      if self.norm_mode or self.lan_mode or self.joined_lan:
+        self.switch_player()
+      else:
+        self.wait_comp()
+    else:
+      if self.wild_tile:
+        self.wild_tile.letter.set(' ')
+        self.wild_tile = None
+
+      self.may_proceed = True
 
   def set_aob_list(self, spot):
     flag = True
