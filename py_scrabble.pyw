@@ -1,4 +1,5 @@
 #! /usr/bin/env python3
+import os
 
 from tkinter import *
 from tkinter.messagebox import askyesno
@@ -10,7 +11,7 @@ class Root(Tk):
     Tk.__init__(self)
     self.title('PyScrabble')
     self.config(bg='azure')
-    self.iconbitmap('./pics/pyscrabble.ico')
+    #self.iconbitmap(os.getcwd() + '/pics/pyscrabble.ico')
     self.protocol('WM_DELETE_WINDOW', self.quit_game)
 
     self.dict = dic
@@ -19,7 +20,7 @@ class Root(Tk):
     x = int((ws/2) - (704/2))
 
     self.geometry("704x420+{}+{}".format(x, 0))
-    self.minsize(704, 420)
+    #self.minsize(704, 420)
 
     self.draw_menu()
     self.draw_container()
@@ -45,7 +46,7 @@ class Root(Tk):
   def start_new(self):
     if askyesno('Start New Game', 'Are you sure to start a new game?'):
       self.geometry('704x420')
-      self.minsize(704, 420)
+      #self.minsize(704, 420)
 
       self.container.destroy()
 

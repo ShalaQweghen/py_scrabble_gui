@@ -42,14 +42,14 @@ class EntryPage(Frame):
 
   def start_normal_game(self):
     self.parent.master.geometry("704x460")
-    self.parent.master.minsize(704, 460)
+    #self.parent.master.minsize(704, 460)
 
     page = NormalStartPage(self.parent, self.dict)
     page.tkraise()
 
   def start_lan_game(self):
     self.parent.master.geometry("704x450")
-    self.parent.master.minsize(704, 450)
+    #self.parent.master.minsize(704, 450)
 
     page = LANStartPage(self.parent, self.dict)
     page.tkraise()

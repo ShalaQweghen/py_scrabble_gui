@@ -1,10 +1,12 @@
 import threading, re, os, pickle, socket, queue, random
+
 from tkinter import *
 from tkinter.messagebox import askyesno
 from tkinter.simpledialog import askstring
 from tkinter.filedialog import asksaveasfilename
 
 from lib.gui.tile import BoardTile, RackTile
+import lib.custom_socket as cs
 
 from lib.dic import Dict
 from lib.bag import Bag
@@ -43,6 +45,7 @@ class GamePage(Frame):
     self.over = False
     self.abled = True
     self.time_up = False
+    self.first_turn = True
     self.game_online = True
     self.may_proceed = True
     self.changing_wild_tile = False
@@ -288,46 +291,90 @@ class GamePage(Frame):
     for i in range(1, options['players']):
       cli, addr = ser.accept()
       lan_players.append(cli)
-      name = cli.recv(1024)
+      name = cs.recv_msg(cli)
       name = pickle.loads(name)
       options['names'].append(name)
 
       print('Connected by {}'.format(addr))
 
-    options = pickle.dumps(options)
+    opts = pickle.dumps(options)
 
     for i, pl in enumerate(lan_players):
-      pl.sendall(pickle.dumps((options, i + 1)))
+      cs.send_msg(pl, pickle.dumps((opts, i + 1)))
 
     self.initialize_players()
 
-    for st in lan_players:
-      st.sendall(pickle.dumps((players, bag)))
+    players = queue.get()
+
+    for pl in lan_players:
+      cs.send_msg(pl, pickle.dumps((players, bag)))
 
     while game_online:
       if cur_play_mark != 0:
-        source = lan_players[cur_play_mark]
-        word = source.recv(1024)
+        source = lan_players[cur_play_mark - 1]
+        word = cs.recv_msg(source)
 
-        word = pickle.loads(word)
+        for pl in lan_players:
+          cs.send_msg(pl, word)
 
-        for st in lan_players:
-          st.sendall(pickle.dumps(word))
+        queue.put(pickle.loads(word))
 
-        queue.put(word)
+        for pl in lan_players:
+          cs.send_msg(pl, pickle.dumps((players, bag)))
 
-        for st in lan_players:
-          st.sendall(pickle.dumps(players))
         cur_play_mark = (cur_play_mark + 1) % options['players']
       else:
-        word = queue.get()
+        word, sorted_keys, letters = queue.get()
 
-        for st in lan_players:
-          st.sendall(pickle.dumps(word))
+        for pl in lan_players:
+          cs.send_msg(pl, pickle.dumps((word, sorted_keys, letters)))
+          cs.send_msg(pl, pickle.dumps((players, bag)))
           
         cur_play_mark = (cur_play_mark + 1) % options['players']
 
     ser.close()
+
+  def handle_lan_game(self, options):
+    host = '127.0.0.1'
+    port = 11235
+
+    sock = socket.socket()
+    sock.connect((host, port))
+
+    print('Connected to {}'.format(host))
+
+    cs.send_msg(sock, pickle.dumps(options['names'][0]))
+
+    self.set_variables()
+
+    options, self.mark = pickle.loads(cs.recv_msg(sock))
+
+    options = pickle.loads(options)
+    options['joined'] = True
+
+    self.resolve_options(options)
+    self.draw_main_frame()
+    self.draw_info_frame()
+
+    players, self.bag = pickle.loads(cs.recv_msg(sock))
+    self.players = players
+
+    self.initialize_game()
+
+    while self.game_online:
+      if self.mark == self.cur_play_mark:
+        if not self.word:
+          self.enable_board()
+
+        if self.word:
+          cs.send_msg(sock, pickle.dumps(self.word))
+      else:
+        self.disable_board()
+
+        self.word, self.sorted_keys, self.letters = pickle.loads(cs.recv_msg(sock))
+        self.players, self.bag = pickle.loads(cs.recv_msg(sock))
+
+        self.process_word()
 
   def countdown(self):
     if self.seconds == 0:
@@ -398,18 +445,19 @@ class GamePage(Frame):
     if self.lan_mode and not self.joined_lan:
       if self.mark == self.cur_play_mark and self.word:
         self.disable_board()
-        self.queue.put(self.word)
+        self.queue.put((self.word, self.sorted_keys, self.letters))
       else:
         self.enable_board()
 
     self.word = None
 
-    if self.norm_mode and not self.loading:
+    if not self.comp_mode and not self.loading and not self.first_turn:
       self.cur_play_mark = (self.cur_play_mark + 1) % self.play_num
 
     self.cur_player = self.players[self.cur_play_mark]
 
     self.loading = False
+    self.first_turn = False
 
     self.update_info()
     self.decorate_rack()
@@ -604,7 +652,9 @@ class GamePage(Frame):
 
   def process_word(self):
     if self.lan_mode and not self.joined_lan and self.mark != self.cur_play_mark:
-      self.word = self.queue.get()
+      print(1)
+      self.word, self.sorted_keys, self.letters = self.queue.get()
+      print(2)
     elif self.letters:
       self.sorted_keys = sorted(self.letters)
 

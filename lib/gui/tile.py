@@ -6,7 +6,7 @@ class Tile(Label):
     self.letter.set(letter)
 
     Label.__init__(self, parent, textvariable=self.letter)
-    self.config(bd=1, height=2, font=('times', 14, 'bold'), width=4, relief=SUNKEN)
+    self.config(bd=1, height=1, font=('times', 14, 'bold'), width=3, relief=SUNKEN)
 
 class BoardTile(Tile):
   def __init__(self, row, col, parent=None, letter=''):

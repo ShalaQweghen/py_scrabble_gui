@@ -102,7 +102,7 @@ class LANStartPage(StartPage):
     self.options['point_limit'] = self.point_var.get()
 
     self.parent.master.geometry('750x785')
-    self.parent.master.minsize(750, 785)
+    #self.parent.master.minsize(750, 785)
     GamePage(self.parent, self.options)
 
 ############################################################################
@@ -166,7 +166,7 @@ class NormalStartPage(StartPage):
       self.options['point_limit'] = self.point_var.get()
 
       self.parent.master.geometry('750x785')
-      self.parent.master.minsize(750, 785)
+      #self.parent.master.minsize(750, 785)
 
       page = GamePage(self.parent, self.options, self.dict)
       page.tkraise()
