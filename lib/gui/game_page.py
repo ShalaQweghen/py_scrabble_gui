@@ -274,7 +274,7 @@ class GamePage(Frame):
       self.changing_wild_tile = False
 
   def initialize_game(self):
-    if self.time_limit:
+    if self.time_limit and not self.lan_mode:
       self.countdown()
 
     self.check_game_over()
@@ -293,7 +293,6 @@ class GamePage(Frame):
     cur_play_mark = 0
     lan_players = []
     abled = True
-    game_online = True
 
     ser = socket.socket()
 
@@ -323,7 +322,10 @@ class GamePage(Frame):
     for pl in lan_players:
       cs.send_msg(pl, pickle.dumps((players, bag)))
 
-    while game_online:
+    if options['time_limit']:
+      self.countdown()
+
+    while self.game_online:
       if cur_play_mark != 0:
         source = lan_players[cur_play_mark - 1]
         pack = cs.recv_msg(source)
@@ -349,7 +351,6 @@ class GamePage(Frame):
     ser.close()
 
   def handle_lan_game(self, options, queue):
-    game_online = True
     cur_play_mark = 0
 
     host = '127.0.0.1'
@@ -372,7 +373,10 @@ class GamePage(Frame):
     
     queue.put((players, bag))
 
-    while game_online:
+    if options['time_limit']:
+      self.countdown()
+
+    while self.game_online:
       if mark == cur_play_mark:
         pack = queue.get()
 
@@ -950,7 +954,7 @@ class GamePage(Frame):
       self.end_game()
     elif self.point_limit:
       for pl in self.players:
-        if pl.score >= self.point_limit:
+        if type(pl).__name__ != 'str' and pl.score >= self.point_limit:
           self.end_game()
 
           return
@@ -974,6 +978,8 @@ class GamePage(Frame):
         rea = 'Game Is Over'
 
       mes = '{} has won with {} points!'.format(self.winner[0], self.winner[1])
+
+      self.game_online = False
 
       self.show_end_game_popup(rea, mes)
     else:
