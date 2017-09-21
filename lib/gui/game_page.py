@@ -462,7 +462,7 @@ class GamePage(Frame):
 
   def switch_player(self):
     if self.lan_mode and not self.first_turn:
-      if self.mark == self.cur_play_mark and self.word:
+      if self.mark == self.cur_play_mark:
         self.disable_board()
         self.queue.put((self.word, self.sorted_keys, self.letters, self.players, self.bag))
       else:
@@ -473,7 +473,6 @@ class GamePage(Frame):
     self.letters = {}
     self.empty_tiles = []
     self.letter_buffer = []
-    self.word = None
     self.start = None
 
     if not self.comp_mode and not self.loading and not self.first_turn:
@@ -541,6 +540,9 @@ class GamePage(Frame):
     self.pas.config(state=DISABLED)
     self.sav.config(state=DISABLED)
 
+    if self.lan_mode:
+      self.chal.config(state=DISABLED)
+
     for k, v in self.gui_board.items():
       self.gui_board[k].active = False
 
@@ -548,6 +550,9 @@ class GamePage(Frame):
     self.sub.config(state=NORMAL)
     self.pas.config(state=NORMAL)
     self.sav.config(state=NORMAL)
+
+    if self.lan_mode:
+      self.chal.config(state=NORMAL)
 
     for k, v in self.gui_board.items():
       self.gui_board[k].active = True
@@ -748,7 +753,7 @@ class GamePage(Frame):
       if not self.valid_sorted_letters():
         self.may_proceed = False
 
-    if self.may_proceed and self.word and self.word.validate():
+    if self.may_proceed and type(self.word) != type(None) and self.word.validate():
       self.cur_player.word = self.word
 
       self.pass_num = 0
