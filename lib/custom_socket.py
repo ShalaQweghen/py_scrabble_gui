@@ -1,3 +1,5 @@
+# Taken from https://stackoverflow.com/a/17668009
+
 import struct
 
 def send_msg(sock, msg):

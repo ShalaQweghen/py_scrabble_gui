@@ -24,15 +24,23 @@ class GamePage(Frame):
     self.bag = Bag()
     self.board = Board()
 
+    self.set_variables()
+
     if options.get('players', False):
+      self.joined_lan = False
+
       self.resolve_options(options)
-      self.set_variables()
-      self.draw_main_frame()
-      self.draw_info_frame()
-      self.initialize_game()
+      
     else:
-      t = threading.Thread(target=self.handle_lan_game, args=(options,))
+      self.joined_lan = True
+      t = threading.Thread(target=self.handle_lan_game, args=(options,self.queue))
       t.start()
+
+      self.resolve_options()
+
+    self.draw_main_frame()
+    self.draw_info_frame()
+    self.initialize_game()
 
   def set_variables(self):
     self.ser = None
@@ -74,8 +82,12 @@ class GamePage(Frame):
     self.status_var = StringVar()
     self.words_var = StringVar()
 
-  def resolve_options(self, options):
-    self.options = options
+  def resolve_options(self, options={}):
+    if self.joined_lan:
+      self.options, self.mark = self.queue.get()
+    else:
+      self.options = options
+
     self.chal_mode = self.options.get('challenge_mode', False)
     self.comp_mode = self.options.get('comp_mode', False)
     self.norm_mode = self.options.get('normal_mode', False)
@@ -85,7 +97,6 @@ class GamePage(Frame):
     self.players = self.options.get('names', [])
     self.play_num = self.options.get('players', 0)
     self.loading = self.options.get('loading', False)
-    self.joined_lan = self.options.get('joined', False)
 
     self.minutes = self.time_limit
 
@@ -271,6 +282,9 @@ class GamePage(Frame):
     if self.lan_mode and not self.joined_lan:
       t = threading.Thread(target=self.create_server, args=(self.options, self.queue, self.bag))
       t.start()
+    elif self.joined_lan:
+      self.players, self.bag = self.queue.get()
+      self.initialize_players()
     else:
       self.initialize_players()
 
@@ -312,29 +326,32 @@ class GamePage(Frame):
     while game_online:
       if cur_play_mark != 0:
         source = lan_players[cur_play_mark - 1]
-        word = cs.recv_msg(source)
+        pack = cs.recv_msg(source)
 
-        for pl in lan_players:
-          cs.send_msg(pl, word)
+        queue.put(pickle.loads(pack))
 
-        queue.put(pickle.loads(word))
+        for i, pl in enumerate(lan_players):
+          if i != cur_play_mark - 1:
+            cs.send_msg(pl,pack)
 
-        for pl in lan_players:
-          cs.send_msg(pl, pickle.dumps((players, bag)))
+        while not queue.empty():
+          continue
 
         cur_play_mark = (cur_play_mark + 1) % options['players']
       else:
-        word, sorted_keys, letters = queue.get()
+        pack = queue.get()
 
         for pl in lan_players:
-          cs.send_msg(pl, pickle.dumps((word, sorted_keys, letters)))
-          cs.send_msg(pl, pickle.dumps((players, bag)))
+          cs.send_msg(pl, pickle.dumps(pack))
           
         cur_play_mark = (cur_play_mark + 1) % options['players']
 
     ser.close()
 
-  def handle_lan_game(self, options):
+  def handle_lan_game(self, options, queue):
+    game_online = True
+    cur_play_mark = 0
+
     host = '127.0.0.1'
     port = 11235
 
@@ -345,36 +362,34 @@ class GamePage(Frame):
 
     cs.send_msg(sock, pickle.dumps(options['names'][0]))
 
-    self.set_variables()
-
-    options, self.mark = pickle.loads(cs.recv_msg(sock))
+    options, mark = pickle.loads(cs.recv_msg(sock))
 
     options = pickle.loads(options)
-    options['joined'] = True
 
-    self.resolve_options(options)
-    self.draw_main_frame()
-    self.draw_info_frame()
+    queue.put((options, mark))
 
-    players, self.bag = pickle.loads(cs.recv_msg(sock))
-    self.players = players
+    players, bag = pickle.loads(cs.recv_msg(sock))
+    
+    queue.put((players, bag))
 
-    self.initialize_game()
+    while game_online:
+      if mark == cur_play_mark:
+        pack = queue.get()
 
-    while self.game_online:
-      if self.mark == self.cur_play_mark:
-        if not self.word:
-          self.enable_board()
+        cs.send_msg(sock, pickle.dumps(pack))
 
-        if self.word:
-          cs.send_msg(sock, pickle.dumps(self.word))
+        cur_play_mark = (cur_play_mark + 1) % options['players']
       else:
-        self.disable_board()
+        pack = pickle.loads(cs.recv_msg(sock))
 
-        self.word, self.sorted_keys, self.letters = pickle.loads(cs.recv_msg(sock))
-        self.players, self.bag = pickle.loads(cs.recv_msg(sock))
+        queue.put(pack)
+        
+        cur_play_mark = (cur_play_mark + 1) % options['players']
 
-        self.process_word()
+        while not queue.empty():
+          continue
+
+    sock.close()
 
   def countdown(self):
     if self.seconds == 0:
@@ -442,31 +457,42 @@ class GamePage(Frame):
     self.switch_player()
 
   def switch_player(self):
-    if self.lan_mode and not self.joined_lan:
+    if self.lan_mode and not self.first_turn:
       if self.mark == self.cur_play_mark and self.word:
         self.disable_board()
-        self.queue.put((self.word, self.sorted_keys, self.letters))
+        self.queue.put((self.word, self.sorted_keys, self.letters, self.players, self.bag))
       else:
         self.enable_board()
+    elif self.joined_lan and self.first_turn:
+      self.disable_board()
 
+    self.letters = {}
+    self.empty_tiles = []
+    self.letter_buffer = []
     self.word = None
+    self.start = None
 
     if not self.comp_mode and not self.loading and not self.first_turn:
       self.cur_play_mark = (self.cur_play_mark + 1) % self.play_num
 
     self.cur_player = self.players[self.cur_play_mark]
 
-    self.loading = False
-    self.first_turn = False
-
     self.update_info()
     self.decorate_rack()
 
-    if self.lan_mode and not self.joined_lan and self.mark != self.cur_play_mark:
+    self.loading = False
+    self.first_turn = False
+
+    if self.lan_mode and self.mark != self.cur_play_mark:
       self.process_word()
 
   def update_info(self):
-    self.status_var.set('... {}\'s Turn ...'.format(self.cur_player.name))
+    if self.lan_mode and self.mark == self.cur_play_mark:
+      name = 'Your'
+    else:
+      name = self.cur_player.name + '\'s'
+
+    self.status_var.set('... {} Turn ...'.format(name))
 
     self.pl1_var.set('{}: {}'.format(self.players[0].name, self.players[0].score))
     self.pl2_var.set('{}: {}'.format(self.players[1].name, self.players[1].score))
@@ -480,21 +506,31 @@ class GamePage(Frame):
     self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
 
   def decorate_rack(self):
-    for l, t in zip(self.cur_player.letters, self.rack):
-      if l == '@':
-        t.letter.set(' ')
-      else:
-        t.letter.set(l)
+    if not self.lan_mode or self.lan_mode and self.mark == self.cur_play_mark:
+      for l, t in zip(self.cur_player.letters, self.rack):
+        if l == '@':
+          t.letter.set(' ')
+        else:
+          t.letter.set(l)
 
-      t['bg'] = '#BE975B'
+        t['bg'] = '#BE975B'
 
-      if self.norm_mode:
-        t['fg'] = '#BE975B'
+        if self.norm_mode:
+          t['fg'] = '#BE975B'
 
-    if len(self.bag.bag) == 0:
-      for t in self.rack[len(self.cur_player.letters):]:
-        t.letter.set('')
-        t['bg'] = '#cccccc'
+      if len(self.bag.bag) == 0:
+        for t in self.rack[len(self.cur_player.letters):]:
+          t.letter.set('')
+          t['bg'] = '#cccccc'
+    elif self.joined_lan and self.first_turn:
+      for l, t in zip(self.players[self.mark].letters, self.rack):
+        if l == '@':
+          t.letter.set(' ')
+        else:
+          t.letter.set(l)
+
+        t['bg'] = '#BE975B'
+
 
   def disable_board(self):
     self.sub.config(state=DISABLED)
@@ -651,10 +687,15 @@ class GamePage(Frame):
         self.letter_buffer.append(tile)
 
   def process_word(self):
-    if self.lan_mode and not self.joined_lan and self.mark != self.cur_play_mark:
-      print(1)
-      self.word, self.sorted_keys, self.letters = self.queue.get()
-      print(2)
+    if self.lan_mode and self.mark != self.cur_play_mark:
+      if self.queue.empty():
+        self.master.master.after(1000, self.process_word)
+      else:
+        self.word, self.sorted_keys,letters, self.players, self.bag = self.queue.get()
+
+        for s, l in letters.items():
+          self.letters[s] = self.gui_board[s]
+          self.letters[s].letter.set(l)
     elif self.letters:
       self.sorted_keys = sorted(self.letters)
 
@@ -703,7 +744,7 @@ class GamePage(Frame):
       if not self.valid_sorted_letters():
         self.may_proceed = False
 
-    if self.may_proceed and self.word.validate():
+    if self.may_proceed and self.word and self.word.validate():
       self.cur_player.word = self.word
 
       self.pass_num = 0
@@ -717,25 +758,27 @@ class GamePage(Frame):
 
           del self.gui_board[key]
 
-      self.letters = {}
+      if not self.lan_mode or self.mark == self.cur_play_mark:
+        self.cur_player.update_rack(self.bag)
+        self.cur_player.update_score()
 
-      self.cur_player.update_rack(self.bag)
-      self.cur_player.update_score()
       self.decorate_rack()
 
-      self.board.place(self.raw_word, self.sorted_keys)
+      self.board.place(self.word.word, self.sorted_keys)
 
       self.set_word_info(self.word.words)
 
       self.prev_words.append(self.word.word)
       self.prev_words.extend([x[0] for x in self.word.extra_words])
 
-      self.empty_tiles = []
+      if self.lan_mode and self.mark != self.cur_play_mark:
+        for tile in self.letters.values():
+          tile['bg'] = '#BE975B'
 
-      self.start = None
+      if self.lan_mode:
+        self.letters = {x:y.letter.get() for x, y in self.letters.items()}
+
       self.old_letter_buffer = self.letter_buffer.copy()
-      self.letter_buffer = []
-
 
       if self.norm_mode or self.lan_mode or self.joined_lan:
         self.switch_player()
