@@ -51,6 +51,7 @@ class GamePage(Frame):
     self.cur_player = None
     self.wild_tile_clone = None
     self.over = False
+    self.passed = False
     self.failed = False
     self.time_up = False
     self.challenged = False
@@ -472,6 +473,8 @@ class GamePage(Frame):
         self.disable_board()
         if not self.failed:
           self.queue.put((self.word, self.sorted_keys, self.letters, self.old_letter_buffer, self.players, self.bag))
+        elif self.passed:
+          self.queue.put(self.bag)
         else:
           self.queue.put((False, None, None))
       elif not self.challenged:
@@ -549,7 +552,7 @@ class GamePage(Frame):
     self.pas.config(state=DISABLED)
     self.sav.config(state=DISABLED)
 
-    if self.lan_mode:
+    if self.lan_mode and self.chal_mode:
       self.chal.config(state=DISABLED)
 
     for k, v in self.gui_board.items():
@@ -560,7 +563,7 @@ class GamePage(Frame):
     self.pas.config(state=NORMAL)
     self.sav.config(state=NORMAL)
 
-    if self.lan_mode:
+    if self.lan_mode and self.chal_mode:
       self.chal.config(state=NORMAL)
 
     for k, v in self.gui_board.items():
@@ -710,28 +713,23 @@ class GamePage(Frame):
         self.letter_buffer.append(tile.name)
 
   def process_word(self):
-    print(self.mark, self.cur_play_mark)
     if self.lan_mode and self.mark != self.cur_play_mark:
       if self.queue.empty():
-        print(0)
         self.may_proceed = False
         self.master.master.after(1000, self.process_word)
       else:
-        print(1)
         pack = self.queue.get()
-        print(pack)
+
+        if len(pack) == 1:
+          self.bag = pack
         if type(pack[0]) == type(True):
-          print(2)
           if pack[0]:
-            print(3)
             self.challenged = True
             self.challenge(pack)
             self.master.master.after(1000, self.process_word)
           else:
-            print(4)
             self.challenge()
         else:
-          print(5)
           self.may_proceed = True
           self.challenged = False
           self.word, self.sorted_keys, letters, self.old_letter_buffer, self.players, self.bag = pack
@@ -740,7 +738,6 @@ class GamePage(Frame):
             self.letters[s] = self.gui_board[s]
             self.letters[s].letter.set(l)
     elif self.letters:
-      print(5)
       self.sorted_keys = sorted(self.letters)
 
       self.raw_word = []
@@ -914,6 +911,8 @@ class GamePage(Frame):
       ent.master.master.destroy()
 
   def pass_letters(self, entry):
+    self.passed = True
+
     for key, value in self.gui_board.items():
       if value.letter.get() != '':
         self.empty_tiles[0].letter.set(value.letter.get())
@@ -934,10 +933,10 @@ class GamePage(Frame):
 
     self.pass_num += 1
 
-    if self.norm_mode:
-      self.switch_player()
-    else:
+    if self.comp_mode:
       self.wait_comp()
+    else:
+      self.switch_player()
 
   def challenge(self, pack=None):
     if self.chal_mode:
