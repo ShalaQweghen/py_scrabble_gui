@@ -51,8 +51,9 @@ class GamePage(Frame):
     self.cur_player = None
     self.wild_tile_clone = None
     self.over = False
-    self.abled = True
+    self.failed = False
     self.time_up = False
+    self.challenged = False
     self.first_turn = True
     self.game_online = True
     self.may_proceed = True
@@ -328,6 +329,7 @@ class GamePage(Frame):
     while self.game_online:
       if cur_play_mark != 0:
         source = lan_players[cur_play_mark - 1]
+
         pack = cs.recv_msg(source)
 
         queue.put(pickle.loads(pack))
@@ -339,14 +341,16 @@ class GamePage(Frame):
         while not queue.empty():
           continue
 
-        cur_play_mark = (cur_play_mark + 1) % options['players']
+        if type(pickle.loads(pack)[0]) != type(True) or not pickle.loads(pack)[0]:
+          cur_play_mark = (cur_play_mark + 1) % options['players']
       else:
         pack = queue.get()
 
         for pl in lan_players:
           cs.send_msg(pl, pickle.dumps(pack))
           
-        cur_play_mark = (cur_play_mark + 1) % options['players']
+        if type(pack[0]) != type(True) or not pack[0]:
+          cur_play_mark = (cur_play_mark + 1) % options['players']
 
     ser.close()
 
@@ -379,16 +383,18 @@ class GamePage(Frame):
     while self.game_online:
       if mark == cur_play_mark:
         pack = queue.get()
-
+        print('why')
         cs.send_msg(sock, pickle.dumps(pack))
 
-        cur_play_mark = (cur_play_mark + 1) % options['players']
+        if type(pack[0]) != type(True) or not pack[0]:
+          cur_play_mark = (cur_play_mark + 1) % options['players']
       else:
         pack = pickle.loads(cs.recv_msg(sock))
 
         queue.put(pack)
         
-        cur_play_mark = (cur_play_mark + 1) % options['players']
+        if type(pack[0]) != type(True) or not pack[0]:
+          cur_play_mark = (cur_play_mark + 1) % options['players']
 
         while not queue.empty():
           continue
@@ -464,8 +470,11 @@ class GamePage(Frame):
     if self.lan_mode and not self.first_turn:
       if self.mark == self.cur_play_mark:
         self.disable_board()
-        self.queue.put((self.word, self.sorted_keys, self.letters, self.players, self.bag))
-      else:
+        if not self.failed:
+          self.queue.put((self.word, self.sorted_keys, self.letters, self.old_letter_buffer, self.players, self.bag))
+        else:
+          self.queue.put((False, None, None))
+      elif not self.challenged:
         self.enable_board()
     elif self.joined_lan and self.first_turn:
       self.disable_board()
@@ -485,6 +494,7 @@ class GamePage(Frame):
 
     self.loading = False
     self.first_turn = False
+    self.failed = False
 
     if self.lan_mode and self.mark != self.cur_play_mark:
       self.process_word()
@@ -533,7 +543,6 @@ class GamePage(Frame):
           t.letter.set(l)
 
         t['bg'] = '#BE975B'
-
 
   def disable_board(self):
     self.sub.config(state=DISABLED)
@@ -596,7 +605,12 @@ class GamePage(Frame):
     self.normalize_board()
 
   def update_rack(self):
-    for rt, l in zip(self.rack, self.cur_player.letters):
+    if self.challenged:
+      player = self.players[self.mark]
+    else:
+      player = self.cur_player
+
+    for rt, l in zip(self.rack, player.letters):
       rt.letter.set(l)
       rt['bg'] = '#BE975B'
 
@@ -625,7 +639,7 @@ class GamePage(Frame):
           event.widget['bg'] = self.start['bg']
 
           self.letters[event.widget.name] = event.widget
-          self.letter_buffer.append(event.widget)
+          self.letter_buffer.append(event.widget.name)
           self.empty_tiles.append(self.start)
 
           self.start['bg'] = '#cccccc'
@@ -651,7 +665,7 @@ class GamePage(Frame):
         del self.letters[self.start.name]
         del self.empty_tiles[self.empty_tiles.index(event.widget)]
 
-        self.letter_buffer.remove(self.start)
+        self.letter_buffer.remove(self.start.name)
 
         widget_var.set(self.start.letter.get())
         event.widget['bg'] = '#BE975B'
@@ -691,21 +705,42 @@ class GamePage(Frame):
 
   def update_buffer_letters(self, tile):
     for it in self.letter_buffer:
-      if it.name == self.start.name:
+      if it == self.start.name:
         self.letter_buffer.remove(it)
-        self.letter_buffer.append(tile)
+        self.letter_buffer.append(tile.name)
 
   def process_word(self):
+    print(self.mark, self.cur_play_mark)
     if self.lan_mode and self.mark != self.cur_play_mark:
       if self.queue.empty():
+        print(0)
+        self.may_proceed = False
         self.master.master.after(1000, self.process_word)
       else:
-        self.word, self.sorted_keys,letters, self.players, self.bag = self.queue.get()
+        print(1)
+        pack = self.queue.get()
+        print(pack)
+        if type(pack[0]) == type(True):
+          print(2)
+          if pack[0]:
+            print(3)
+            self.challenged = True
+            self.challenge(pack)
+            self.master.master.after(1000, self.process_word)
+          else:
+            print(4)
+            self.challenge()
+        else:
+          print(5)
+          self.may_proceed = True
+          self.challenged = False
+          self.word, self.sorted_keys, letters, self.old_letter_buffer, self.players, self.bag = pack
 
-        for s, l in letters.items():
-          self.letters[s] = self.gui_board[s]
-          self.letters[s].letter.set(l)
+          for s, l in letters.items():
+            self.letters[s] = self.gui_board[s]
+            self.letters[s].letter.set(l)
     elif self.letters:
+      print(5)
       self.sorted_keys = sorted(self.letters)
 
       self.raw_word = []
@@ -752,6 +787,8 @@ class GamePage(Frame):
 
       if not self.valid_sorted_letters():
         self.may_proceed = False
+      else:
+        self.may_proceed = True
 
     if self.may_proceed and type(self.word) != type(None) and self.word.validate():
       self.cur_player.word = self.word
@@ -770,6 +807,7 @@ class GamePage(Frame):
       if not self.lan_mode or self.mark == self.cur_play_mark:
         self.cur_player.update_rack(self.bag)
         self.cur_player.update_score()
+        self.old_letter_buffer = self.letter_buffer.copy()
 
       self.decorate_rack()
 
@@ -787,8 +825,6 @@ class GamePage(Frame):
       if self.lan_mode:
         self.letters = {x:y.letter.get() for x, y in self.letters.items()}
 
-      self.old_letter_buffer = self.letter_buffer.copy()
-
       if self.norm_mode or self.lan_mode or self.joined_lan:
         self.switch_player()
       else:
@@ -797,8 +833,6 @@ class GamePage(Frame):
       if self.wild_tile:
         self.wild_tile.letter.set(' ')
         self.wild_tile = None
-
-      self.may_proceed = True
 
   def set_aob_list(self, spot):
     flag = True
@@ -905,7 +939,7 @@ class GamePage(Frame):
     else:
       self.wait_comp()
 
-  def challenge(self):
+  def challenge(self, pack=None):
     if self.chal_mode:
       for word in self.prev_words:
         if not self.dict.valid_word(word):
@@ -918,29 +952,42 @@ class GamePage(Frame):
             self.players[self.cur_play_mark - 1].letters.remove(new)
             self.bag.put_back([new])
 
+          print(self.old_letter_buffer)  
           for tile in self.old_letter_buffer:
-            if tile.name in self.used_spots:
-              if tile is self.wild_tile_clone:
-                self.board.wild_tiles_on_board.remove(tile.name)
-                tile.letter.set(' ')
+            if tile in self.used_spots:
+              if self.wild_tile_clone and tile == self.wild_tile_clone.name:
+                self.board.wild_tiles_on_board.remove(tile)
+                self.used_spots[tile].letter.set(' ')
+              else:
+                self.players[self.cur_play_mark -1].letters.append(self.used_spots[tile].letter.get())
+                self.used_spots[tile].letter.set('')
 
-              self.players[self.cur_play_mark -1].letters.append(tile.letter.get())
-              self.board.board[tile.name] = ' '
+              self.board.board[tile] = ' '
 
-              tile.letter.set('')
-              tile.active = True
-              self.determine_background(tile)
+              self.used_spots[tile].active = True
+              self.determine_background(self.used_spots[tile])
 
-              del self.used_spots[tile.name]
+              self.gui_board[tile] = self.used_spots[tile]
 
-              self.gui_board[tile.name] = tile
+              del self.used_spots[tile]
 
           self.prev_words = []
           self.old_letter_buffer = []
 
+          if not self.challenged:
+            self.queue.put((True, self.players, self.bag))
+
+          if self.challenged:
+            self.players = pack[1]
+            self.bag = pack[2]
+            self.update_rack()
+
           self.update_info()
 
           return True
+      
+      if self.lan_mode:
+        self.failed = True
 
       self.switch_player()
 
