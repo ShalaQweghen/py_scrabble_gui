@@ -28,3 +28,18 @@ def recvall(sock, n):
 		data += packet
 
 	return data
+
+# Taken from https://stackoverflow.com/a/28950776
+import socket
+
+def find_own_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.255.255.255', 1))
+        ip = s.getsockname()[0]
+    except:
+        ip = '127.0.0.1'
+    finally:
+        s.close()
+
+    return ip

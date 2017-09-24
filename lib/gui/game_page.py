@@ -333,24 +333,26 @@ class GamePage(Frame):
 
         pack = cs.recv_msg(source)
 
-        queue.put(pickle.loads(pack))
+        if pack[0] != mark:
 
-        for i, pl in enumerate(lan_players):
-          if i != cur_play_mark - 1:
-            cs.send_msg(pl,pack)
+          queue.put(pickle.loads(pack))
 
-        while not queue.empty():
-          continue
+          for i, pl in enumerate(lan_players):
+            if i != cur_play_mark - 1:
+              cs.send_msg(pl,pack)
 
-        if type(pickle.loads(pack)[0]) != type(True) or not pickle.loads(pack)[0]:
-          cur_play_mark = (cur_play_mark + 1) % options['players']
+          while not queue.empty():
+            continue
+
+          if type(pickle.loads(pack)[1]) != type(True) or not pickle.loads(pack)[1]:
+            cur_play_mark = (cur_play_mark + 1) % options['players']
       else:
         pack = queue.get()
 
         for pl in lan_players:
           cs.send_msg(pl, pickle.dumps(pack))
           
-        if type(pack[0]) != type(True) or not pack[0]:
+        if type(pack[1]) != type(True) or not pack[1]:
           cur_play_mark = (cur_play_mark + 1) % options['players']
 
     ser.close()
@@ -384,21 +386,21 @@ class GamePage(Frame):
     while self.game_online:
       if mark == cur_play_mark:
         pack = queue.get()
-        print('why')
         cs.send_msg(sock, pickle.dumps(pack))
 
-        if type(pack[0]) != type(True) or not pack[0]:
+        if type(pack[1]) != type(True) or not pack[1]:
           cur_play_mark = (cur_play_mark + 1) % options['players']
       else:
         pack = pickle.loads(cs.recv_msg(sock))
 
-        queue.put(pack)
-        
-        if type(pack[0]) != type(True) or not pack[0]:
-          cur_play_mark = (cur_play_mark + 1) % options['players']
+        if pack[0] != mark:
+          queue.put(pack)
+          
+          if type(pack[1]) != type(True) or not pack[1]:
+            cur_play_mark = (cur_play_mark + 1) % options['players']
 
-        while not queue.empty():
-          continue
+          while not queue.empty():
+            continue
 
     sock.close()
 
@@ -472,11 +474,11 @@ class GamePage(Frame):
       if self.mark == self.cur_play_mark:
         self.disable_board()
         if not self.failed:
-          self.queue.put((self.word, self.sorted_keys, self.letters, self.old_letter_buffer, self.players, self.bag))
+          self.queue.put((self.mark, self.word, self.sorted_keys, self.letters, self.old_letter_buffer, self.players, self.bag, self.board))
         elif self.passed:
-          self.queue.put(self.bag)
+          self.queue.put((self.mark, self.bag))
         else:
-          self.queue.put((False, None, None))
+          self.queue.put((self.mark, False, None, None))
       elif not self.challenged:
         self.enable_board()
     elif self.joined_lan and self.first_turn:
@@ -720,10 +722,10 @@ class GamePage(Frame):
       else:
         pack = self.queue.get()
 
-        if len(pack) == 1:
-          self.bag = pack
-        if type(pack[0]) == type(True):
-          if pack[0]:
+        if len(pack) == 2:
+          self.bag = pack[1]
+        elif type(pack[1]) == type(True):
+          if pack[1]:
             self.challenged = True
             self.challenge(pack)
             self.master.master.after(1000, self.process_word)
@@ -732,7 +734,7 @@ class GamePage(Frame):
         else:
           self.may_proceed = True
           self.challenged = False
-          self.word, self.sorted_keys, letters, self.old_letter_buffer, self.players, self.bag = pack
+          mark, self.word, self.sorted_keys, letters, self.old_letter_buffer, self.players, self.bag, self.board = pack
 
           for s, l in letters.items():
             self.letters[s] = self.gui_board[s]
@@ -741,17 +743,27 @@ class GamePage(Frame):
       self.sorted_keys = sorted(self.letters)
 
       self.raw_word = []
-      check1 = self.sorted_keys[0][0]
-      check2 = self.sorted_keys[-1][0]
 
-      if check1 == check2:
-        digits = sorted([int(x[1:]) for x in self.sorted_keys])
-        self.sorted_keys = [check1 + str(x) for x in digits]
-        self.sorted_keys.reverse()
+      if len(self.sorted_keys) == 1:
+        r = chr(ord(self.sorted_keys[0][0]) + 1) + self.sorted_keys[0][1:]
+        l = chr(ord(self.sorted_keys[0][0]) - 1) + self.sorted_keys[0][1:]
 
-        self.direction = 'd'
+        if re.fullmatch('[A-Z@]', self.board.board[r]) or re.fullmatch('[A-Z@]', self.board.board[l]):
+          self.direction = 'r'
+        else:
+          self.direction = 'd'
       else:
-        self.direction = 'r'
+        check1 = self.sorted_keys[0][0]
+        check2 = self.sorted_keys[-1][0]
+
+        if check1 == check2:
+          digits = sorted([int(x[1:]) for x in self.sorted_keys])
+          self.sorted_keys = [check1 + str(x) for x in digits]
+          self.sorted_keys.reverse()
+
+          self.direction = 'd'
+        else:
+          self.direction = 'r'
 
       self.aob_list = []
 
@@ -778,9 +790,9 @@ class GamePage(Frame):
       if ' ' in self.raw_word:
         self.show_popup('Set Wild Tile', 'Enter a letter:', 'Set', self.change_wild_tile)
 
-      self.word = Word(self.sorted_keys[0], self.direction, self.raw_word, self.board, self.dict, self.chal_mode)
+      aob_list = [x[2] for x in self.aob_list]
 
-      self.word.set_aob_list([x[2] for x in self.aob_list])
+      self.word = Word(self.sorted_keys[0], self.direction, self.raw_word, self.board, self.dict, aob_list, self.chal_mode)
 
       if not self.valid_sorted_letters():
         self.may_proceed = False
@@ -802,8 +814,8 @@ class GamePage(Frame):
           del self.gui_board[key]
 
       if not self.lan_mode or self.mark == self.cur_play_mark:
-        self.cur_player.update_rack(self.bag)
         self.cur_player.update_score()
+        self.cur_player.update_rack(self.bag)
         self.old_letter_buffer = self.letter_buffer.copy()
 
       self.decorate_rack()
@@ -950,8 +962,7 @@ class GamePage(Frame):
           for new in self.players[self.cur_play_mark - 1].new_letters:
             self.players[self.cur_play_mark - 1].letters.remove(new)
             self.bag.put_back([new])
-
-          print(self.old_letter_buffer)  
+ 
           for tile in self.old_letter_buffer:
             if tile in self.used_spots:
               if self.wild_tile_clone and tile == self.wild_tile_clone.name:
@@ -974,11 +985,11 @@ class GamePage(Frame):
           self.old_letter_buffer = []
 
           if not self.challenged:
-            self.queue.put((True, self.players, self.bag))
+            self.queue.put((self.mark, True, self.players, self.bag))
 
           if self.challenged:
-            self.players = pack[1]
-            self.bag = pack[2]
+            self.players = pack[2]
+            self.bag = pack[3]
             self.update_rack()
 
           self.update_info()
@@ -1005,7 +1016,7 @@ class GamePage(Frame):
       self.end_game()
     elif self.point_limit:
       for pl in self.players:
-        if type(pl).__name__ != 'str' and pl.score >= self.point_limit:
+        if type(pl) != type('') and pl.score >= self.point_limit:
           self.end_game()
 
           return
@@ -1015,26 +1026,29 @@ class GamePage(Frame):
       self.master.master.after(1000, self.check_game_over)
 
   def end_game(self):
-    if self.chal_mode and len(self.bag.bag) == 0 and [pl for pl in self.players if len(pl.letters) == 0]:
-      challenged = askyesno('Challenge', 'Will you challenge any of \'{}\'?'.format(', '.join(self.prev_words))) and self.challenge()
-    else:
-      challenged = False
+    if not self.over:
+      self.over = True
 
-    if not challenged:
-      self.determine_winner()
-
-      if self.time_up:
-        rea = 'Time Is Up'
+      if self.chal_mode and len(self.bag.bag) == 0 and [pl for pl in self.players if len(pl.letters) == 0]:
+        challenged = askyesno('Challenge', 'Will you challenge any of \'{}\'?'.format(', '.join(self.prev_words))) and self.challenge()
       else:
-        rea = 'Game Is Over'
+        challenged = False
 
-      mes = '{} has won with {} points!'.format(self.winner[0], self.winner[1])
+      if not challenged:
+        self.determine_winner()
 
-      self.game_online = False
+        if self.time_up:
+          rea = 'Time Is Up'
+        else:
+          rea = 'Game Is Over'
 
-      self.show_end_game_popup(rea, mes)
-    else:
-      self.check_game_over()
+        mes = '{} has won with {} points!'.format(self.winner[0], self.winner[1])
+
+        self.game_online = False
+
+        self.show_end_game_popup(rea, mes)
+      else:
+        self.check_game_over()
 
   def show_end_game_popup(self, reason, message):
     w = Toplevel(self)

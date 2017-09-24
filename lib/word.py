@@ -1,7 +1,7 @@
 import re
 
 class Word:
-  def __init__(self, start, direction, word, board, dic, chal=False):
+  def __init__(self, start, direction, word, board, dic, aob, chal=False):
     self.start = start
     self.dict = dic
     self.direction = direction
@@ -10,11 +10,10 @@ class Word:
 
     self.points = 0
     self.valid = False
-    self.aob_list = []
     self.wild_tiles = []
     self.extra_words = []
     self.words = {}
-    self.invalid_word = False
+    self.aob_list = aob
     self.chal_mode = chal
 
     self.range = self._set_range()
@@ -60,10 +59,6 @@ class Word:
 
     return self.points
 
-  def reset(self):
-    self.extra_words = []
-    self.word = None
-
   def valid_move(self):
     if not self.range:
       return False
@@ -89,21 +84,14 @@ class Word:
 
       if not self.chal_mode:
         if not self.dict.valid_word(self.word):
-          self.error_message = '{} is not in dictionary...'.format(self.word)
-          self.invalid_word = True
           return False
 
       if not self.process_extra_words():
-        self.error_message = '{} is not in the dictionary...'.format(self.invalid_word)
-        self.invalid_word = True
         return False
 
       self.valid = True
 
       return True
-
-  def set_aob_list(self, aob_list):
-    self.aob_list = aob_list
 
   def _set_range(self):
     if self.direction == "r":
@@ -188,7 +176,8 @@ class Word:
 
     if self.word_bonus:
       for s in w_range:
-        word_points *= self.word_bonus.get(s, 1)
+        if s != 'h8' or not self.aob_list:
+          word_points *= self.word_bonus.get(s, 1)
 
     self.words[word] = word_points
 
