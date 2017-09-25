@@ -101,8 +101,8 @@ class LANStartPage(StartPage):
     self.options['challenge_mode'] = bool(self.chal_var.get())
     self.options['point_limit'] = self.point_var.get()
 
-    self.parent.master.geometry('750x785')
-    #self.parent.master.minsize(750, 785)
+    self.parent.master.set_geometry()
+    
     GamePage(self.parent, self.options)
 
 ############################################################################
@@ -126,8 +126,8 @@ class NormalStartPage(StartPage):
     self.play_var.set(2)
 
   def draw_name_fields(self):
-    self.parent.master.geometry('704x580')
-    self.parent.master.minsize(704, 580)
+    self.parent.master.geometry('704x500')
+    self.parent.master.minsize(704, 500)
 
     t = Frame(self, pady=20, padx=10, bg='azure')
     t.pack()
@@ -165,8 +165,7 @@ class NormalStartPage(StartPage):
       self.options['challenge_mode'] = bool(self.chal_var.get())
       self.options['point_limit'] = self.point_var.get()
 
-      self.parent.master.geometry('750x785')
-      #self.parent.master.minsize(750, 785)
+      self.parent.master.set_geometry()
 
       page = GamePage(self.parent, self.options, self.dict)
       page.tkraise()

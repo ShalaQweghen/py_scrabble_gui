@@ -9,6 +9,7 @@ class Word:
     self.board = board
 
     self.points = 0
+    self.new = True
     self.valid = False
     self.wild_tiles = []
     self.extra_words = []
@@ -90,6 +91,7 @@ class Word:
         return False
 
       self.valid = True
+      self.new = False
 
       return True
 

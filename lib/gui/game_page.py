@@ -1,4 +1,4 @@
-import threading, re, os, pickle, socket, queue, random
+import threading, re, os, pickle, socket, queue
 
 from tkinter import *
 from tkinter.messagebox import askyesno
@@ -148,14 +148,14 @@ class GamePage(Frame):
     button_f = Frame(out_f, bg='azure')
     button_f.pack(side=TOP)
 
-    self.sub = Button(button_f, text='Submit', bg='azure', command=self.process_word)
+    self.sub = Button(button_f, text='Submit', command=self.process_word)
     self.sub.pack(side=LEFT, padx=5)
 
-    self.pas = Button(button_f, text='Pass', bg='azure', command=lambda: self.show_popup('Pass Letters', 'Enter letters to pass:', 'Pass', self.pass_letters))
+    self.pas = Button(button_f, text='Pass', command=lambda: self.show_popup('Pass Letters', 'Enter letters to pass:', 'Pass', self.pass_letters))
     self.pas.pack(side=LEFT, padx=5)
 
     if self.chal_mode:
-      self.chal = Button(button_f, bg='azure', text='Challenge', command=self.challenge)
+      self.chal = Button(button_f, text='Challenge', command=self.challenge)
       self.chal.pack(side=LEFT, padx=5)
 
     if self.norm_mode:
@@ -181,11 +181,11 @@ class GamePage(Frame):
     info_frame = Frame(self, bg='azure')
     info_frame.pack(side=LEFT, fill=BOTH)
 
-    self.sav = Button(info_frame, text='Save Game', command=self.save_game, bg='azure')
-    self.sav.pack(side=TOP, pady=90)
+    self.sav = Button(info_frame, text='Save Game', command=self.save_game)
+    self.sav.pack(side=TOP, pady=50)
 
     f = Frame(info_frame, bg='azure')
-    f.pack(side=TOP, pady=50, fill=X)
+    f.pack(side=TOP, pady=40, fill=X)
 
     options = {'font': ('times', 15, 'italic'), 'bg': 'azure', 'fg': '#004d00'}
 
@@ -301,16 +301,12 @@ class GamePage(Frame):
     ser.bind(('', 11235))
     ser.listen()
 
-    print('\nServer up and running...\n')
-
     for i in range(1, options['players']):
       cli, addr = ser.accept()
       lan_players.append(cli)
       name = cs.recv_msg(cli)
       name = pickle.loads(name)
       options['names'].append(name)
-
-      print('Connected by {}'.format(addr))
 
     opts = pickle.dumps(options)
 
@@ -360,13 +356,7 @@ class GamePage(Frame):
   def handle_lan_game(self, options, queue):
     cur_play_mark = 0
 
-    host = '127.0.0.1'
-    port = 11235
-
-    sock = socket.socket()
-    sock.connect((host, port))
-
-    print('Connected to {}'.format(host))
+    sock = cs.find_server()
 
     cs.send_msg(sock, pickle.dumps(options['names'][0]))
 
@@ -735,6 +725,7 @@ class GamePage(Frame):
           self.may_proceed = True
           self.challenged = False
           mark, self.word, self.sorted_keys, letters, self.old_letter_buffer, self.players, self.bag, self.board = pack
+          self.word.new = True
 
           for s, l in letters.items():
             self.letters[s] = self.gui_board[s]
@@ -799,7 +790,7 @@ class GamePage(Frame):
       else:
         self.may_proceed = True
 
-    if self.may_proceed and type(self.word) != type(None) and self.word.validate():
+    if self.may_proceed and type(self.word) != type(None) and self.word.new and self.word.validate():
       self.cur_player.word = self.word
 
       self.pass_num = 0

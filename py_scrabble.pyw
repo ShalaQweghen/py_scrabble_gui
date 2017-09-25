@@ -20,7 +20,7 @@ class Root(Tk):
     x = int((ws/2) - (704/2))
 
     self.geometry("704x420+{}+{}".format(x, 0))
-    #self.minsize(704, 420)
+    self.minsize(704, 420)
 
     self.draw_menu()
     self.draw_container()
@@ -46,7 +46,7 @@ class Root(Tk):
   def start_new(self):
     if askyesno('Start New Game', 'Are you sure to start a new game?'):
       self.geometry('704x420')
-      #self.minsize(704, 420)
+      self.minsize(704, 420)
 
       self.container.destroy()
 
@@ -57,6 +57,10 @@ class Root(Tk):
   def quit_game(self):
     if askyesno('Quit Game', 'Are you sure to quit the game?'):
       self.quit()
+
+  def set_geometry(self):
+    self.geometry("700x650")
+    self.minsize(700, 650)
 
 
 Root().mainloop()

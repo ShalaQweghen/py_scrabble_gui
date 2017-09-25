@@ -34,22 +34,21 @@ class EntryPage(Frame):
 
 
   def start_computer_game(self):
-    self.parent.master.geometry("750x785")
-    self.parent.master.minsize(750, 785)
+    self.parent.master.set_geometry()
 
     page = GamePage(self.parent, {'comp_mode': True, 'names': ['Player', 'Computer'], 'players': 2}, self.dict)
     page.tkraise()
 
   def start_normal_game(self):
-    self.parent.master.geometry("704x460")
-    #self.parent.master.minsize(704, 460)
+    self.parent.master.geometry("704x400")
+    self.parent.master.minsize(704, 400)
 
     page = NormalStartPage(self.parent, self.dict)
     page.tkraise()
 
   def start_lan_game(self):
     self.parent.master.geometry("704x450")
-    #self.parent.master.minsize(704, 450)
+    self.parent.master.minsize(704, 450)
 
     page = LANStartPage(self.parent, self.dict)
     page.tkraise()
@@ -71,8 +70,7 @@ class EntryPage(Frame):
                   'loading': True
                 }
 
-      self.parent.master.geometry("750x785")
-      self.parent.master.minsize(750, 785)
+      self.parent.master.set_geometry()
 
       game = GamePage(self.master, options)
 
@@ -87,8 +85,8 @@ class EntryPage(Frame):
   def join_game(self):
     name = askstring('Enter Name', 'Enter your name:')
 
-    self.parent.master.geometry('750x785')
-    self.parent.master.minsize(750, 785)
+    self.parent.master.set_geometry()
+    
     GamePage(self.parent, {'names': [name]})
 
 
