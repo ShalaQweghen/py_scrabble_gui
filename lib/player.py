@@ -56,7 +56,6 @@ class Player:
 
 			if self.full_bonus:
 				self.score += 60
-				self.full_bonus = False
 
 	def _pick_from(self, bag):
 		if bag:

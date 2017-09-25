@@ -223,6 +223,7 @@ class GamePage(Frame):
 
     if self.cur_player.full_bonus:
       mes = mes + ('\nBonus 60\n')
+      self.cur_player.full_bonus = False
 
     self.words_var.set(mes[:-1])
 
@@ -805,8 +806,8 @@ class GamePage(Frame):
           del self.gui_board[key]
 
       if not self.lan_mode or self.mark == self.cur_play_mark:
-        self.cur_player.update_score()
         self.cur_player.update_rack(self.bag)
+        self.cur_player.update_score()
         self.old_letter_buffer = self.letter_buffer.copy()
 
       self.decorate_rack()
