@@ -19,7 +19,7 @@ class StartPage(Frame):
 
     self.but_var.set('Start Game')
 
-    self.players = []
+    self.play_ents = []
 
     self.draw_heading()
     self.draw_player_name()
@@ -97,8 +97,8 @@ class LANStartPage(StartPage):
     self.options['names'] = [self.name_var.get()]
     self.options['lan_mode'] = True
     self.options['time_limit'] = self.time_var.get()
-    self.options['players'] = self.play_var.get()
-    self.options['challenge_mode'] = bool(self.chal_var.get())
+    self.options['play_num'] = self.play_var.get()
+    self.options['chal_mode'] = bool(self.chal_var.get())
     self.options['point_limit'] = self.point_var.get()
 
     self.parent.master.set_geometry()
@@ -143,12 +143,12 @@ class NormalStartPage(StartPage):
       ent = Entry(f, textvariable=var)
       ent.pack(side=LEFT)
 
-      self.players.append(ent)
+      self.play_ents.append(ent)
 
   def get_player_names(self):
     names = []
 
-    for name in self.players:
+    for name in self.play_ents:
       names.append(name.get().strip().capitalize())
 
     self.options = {'names': names}
@@ -156,13 +156,13 @@ class NormalStartPage(StartPage):
     random.shuffle(self.options['names'])
 
   def construct_options(self):
-    if self.players:
+    if self.play_ents:
       self.get_player_names()
 
       self.options['normal_mode'] = True
       self.options['time_limit'] = self.time_var.get()
-      self.options['players'] = self.play_var.get()
-      self.options['challenge_mode'] = bool(self.chal_var.get())
+      self.options['play_num'] = self.play_var.get()
+      self.options['chal_mode'] = bool(self.chal_var.get())
       self.options['point_limit'] = self.point_var.get()
 
       self.parent.master.set_geometry()

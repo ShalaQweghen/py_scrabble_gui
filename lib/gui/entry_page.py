@@ -1,4 +1,4 @@
-import pickle, os, json, socket, threading
+import pickle
 
 from tkinter import *
 from tkinter.filedialog import askopenfilename
@@ -36,7 +36,7 @@ class EntryPage(Frame):
   def start_computer_game(self):
     self.parent.master.set_geometry()
 
-    page = GamePage(self.parent, {'comp_mode': True, 'names': ['Player', 'Computer'], 'players': 2}, self.dict)
+    page = GamePage(self.parent, {'comp_mode': True, 'names': ['Player', 'Computer'], 'play_num': 2}, self.dict)
     page.tkraise()
 
   def start_normal_game(self):
@@ -61,12 +61,12 @@ class EntryPage(Frame):
       data = pickle.load(file)
 
       options = {
-                  'challenge_mode': data['chal_mode'],
+                  'chal_mode': data['chal_mode'],
                   'comp_mode': data['comp_mode'],
                   'normal_mode': data['norm_mode'],
                   'time_limit': data['time_limit'],
                   'point_limit': data['point_limit'],
-                  'players': data['play_num'],
+                  'play_num': data['play_num'],
                   'loading': True
                 }
 

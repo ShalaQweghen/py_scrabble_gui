@@ -1,4 +1,5 @@
-import sys, re
+import re
+
 from lib.word import Word
 
 class Player:
@@ -6,18 +7,17 @@ class Player:
 		self.name = name
 		self.score = 0
 		self.letters = []
-		self.wild_tiles = []
+		self.wild_letters = []
 		self.word = None
 		self.full_bonus = False
 		self.passed_letters = []
 		self.new_letters = []
 
-	def set_passed_letters(self, passed_letters):
-		self.passed_letters = passed_letters
-
 	def draw_letters(self, bag, amount=7):
 		for i in range(amount):
 			self.letters.append(self._pick_from(bag))
+
+			# $ means there are no letters left in the bag
 			if self.letters[-1] != '$':
 				self.new_letters.append(self.letters[-1])
 
@@ -26,19 +26,18 @@ class Player:
 	def update_rack(self, bag):
 		self.new_letters = []
 
-		if not self.passed_letters:
+		if self.passed_letters:
+			for letter in self.passed_letters:
+				if letter in self.letters:
+					self._remove_tile(letter)
+		else:
 			aob = len(self.word.aob_list)
 
-		if self.passed_letters:
-			for l in self.passed_letters:
-				if l in self.letters:
-					self._remove_tile(l)
-		else:
-			for l in self.word.word:
-				self._remove_tile(l)
+			for letter in self.word.word:
+				self._remove_tile(letter)
 
-		if not self.passed_letters and len(self.letters) == 0:
-			self.full_bonus = True
+			if len(self.letters) == 0:
+				self.full_bonus = True
 
 		if len(bag.bag) > 0:
 			if self.passed_letters:
@@ -49,6 +48,8 @@ class Player:
 		self.passed_letters = []
 
 	def update_score(self, points=0):
+		# If a points argument provided, it means 
+		# that it should be substracted
 		if points:
 			self.score -= points
 		else:
@@ -61,14 +62,14 @@ class Player:
 		if bag:
 			return bag.draw()
 
-	def _remove_tile(self, l):
-		if l not in self.wild_tiles:
-			if self.passed_letters and l in self.letters:
-				self.letters.remove(l)
-			elif l in self.word.aob_list:
-				self.word.aob_list.remove(l)
+	def _remove_tile(self, letter):
+		if letter not in self.wild_letters:
+			if self.passed_letters and letter in self.letters:
+				self.letters.remove(letter)
+			elif letter in self.word.aob_list:
+				self.word.aob_list.remove(letter)
 			else:
-				self.letters.remove(l)
+				self.letters.remove(letter)
 		else:
 			self.letters.remove('@')
-			self.wild_tiles.remove(l)
+			self.wild_letters.remove(letter)

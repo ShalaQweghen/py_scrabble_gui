@@ -5,8 +5,8 @@ from tkinter.messagebox import askyesno
 from tkinter.simpledialog import askstring
 from tkinter.filedialog import asksaveasfilename
 
-from lib.gui.tile import BoardTile, RackTile
 import lib.custom_socket as cs
+import lib.helpers as helpers
 
 from lib.dic import Dict
 from lib.bag import Bag
@@ -14,6 +14,7 @@ from lib.word import Word
 from lib.board import Board
 from lib.comp import AIOpponent
 from lib.player import Player
+from lib.gui.tile import BoardTile, RackTile
 
 class GamePage(Frame):
   def __init__(self, parent, options, dic='./dics/sowpods.txt'):
@@ -26,11 +27,10 @@ class GamePage(Frame):
 
     self.set_variables()
 
-    if options.get('players', False):
+    # There isn't a play_num key in the options, it is a game joined on lan
+    if options.get('play_num', False):
       self.joined_lan = False
-
-      self.resolve_options(options)
-      
+      self.resolve_options(options)  
     else:
       self.joined_lan = True
       t = threading.Thread(target=self.handle_lan_game, args=(options,self.queue))
@@ -43,61 +43,63 @@ class GamePage(Frame):
     self.initialize_game()
 
   def set_variables(self):
-    self.ser = None
     self.word = None
-    self.start = None
     self.winner = None
     self.wild_tile = None
     self.cur_player = None
-    self.wild_tile_clone = None
-    self.over = False
-    self.passed = False
-    self.failed = False
+    self.start_tile = None
+    self.wild_tile_clone = None # Necessary for challenge mode
+
     self.time_up = False
-    self.challenged = False
+    self.game_over = False
+    self.chal_failed = False
+    self.is_challenged = False  # Necessary for lan game
+    self.letters_passed = False # Necessary for lan game
+    self.setting_wild_tile = False
+
     self.first_turn = True
     self.game_online = True
     self.may_proceed = True
-    self.changing_wild_tile = False
-    self.mark = 0
+    
     self.seconds = 0
-    self.op_score = 0
+    self.own_mark = 0 # Necessary for lan game
+    self.op_score = 0 # For games against computer
     self.pass_num = 0
     self.cur_play_mark = 0
-    self.letters = {}
+
     self.gui_board = {}
     self.used_spots = {}
+    self.placed_tiles = {}
+
     self.rack = []
     self.losers = []
     self.raw_word = []
-    self.word_info = []
-    self.prev_words = []
-    self.play_winfo = []
-    self.empty_tiles = []
-    self.letter_buffer = []
-    self.old_letter_buffer = []
+    self.prev_words = []  # Necessary for challenge mode
+    self.spots_buffer = []  # Necessary for challenge mode
+    self.empty_rack_tiles = []
+    self.prev_spots_buffer = [] # Necessary for challenge mode
 
     self.queue = queue.Queue()
 
-    self.bag_var = StringVar()
-    self.time_var = StringVar()
-    self.status_var = StringVar()
-    self.words_var = StringVar()
+    self.bag_info = StringVar()
+    self.time_info = StringVar()
+    self.status_info = StringVar()
+    self.words_info = StringVar()
 
   def resolve_options(self, options={}):
     if self.joined_lan:
-      self.options, self.mark = self.queue.get()
+      self.options, self.own_mark = self.queue.get()
     else:
       self.options = options
 
-    self.chal_mode = self.options.get('challenge_mode', False)
+    self.chal_mode = self.options.get('chal_mode', False)
     self.comp_mode = self.options.get('comp_mode', False)
     self.norm_mode = self.options.get('normal_mode', False)
     self.lan_mode = self.options.get('lan_mode', False)
     self.time_limit = self.options.get('time_limit', 0)
     self.point_limit = self.options.get('point_limit', 0)
     self.players = self.options.get('names', [])
-    self.play_num = self.options.get('players', 0)
+    self.play_num = self.options.get('play_num', 0)
     self.loading = self.options.get('loading', False)
 
     self.minutes = self.time_limit
@@ -106,213 +108,243 @@ class GamePage(Frame):
     out_f = Frame(self, padx=30, bg='azure')
     out_f.pack(side=LEFT)
 
-    Label(out_f, textvariable=self.status_var, bg='azure', fg='#FF4500', font=('times', 25, 'italic')).pack(side=TOP, pady=15)
+    l = Label(out_f, textvariable=self.status_info)
+    l.config(bg='azure', fg='#FF4500', font=('times', 25, 'italic'))
+    l.pack(side=TOP, pady=15)
 
     board_f = Frame(out_f)
     board_f.pack(side=TOP)
 
-    row = 0
-    row_n = 15
+    row_num = 0
+    row_name = 15
 
-    while row < 15:
-      col = 0
-      col_n = 'a'
+    while row_num < 15:
+      col_num = 0
+      col_name = 'a'
 
-      while col < 15:
-        t = BoardTile(row, col, board_f)
-        t.bind('<1>', self.place_tile)
-        t.name = col_n + str(row_n)
-        self.determine_background(t)
+      while col_num < 15:
+        tile = BoardTile(row_num, col_num, board_f)
+        tile.bind('<1>', self.place_tile)
+        tile.name = col_name + str(row_name)
+        self.determine_tile_background(tile)
 
-        self.gui_board[t.name] = t
+        self.gui_board[tile.name] = tile
 
-        col += 1
-        col_n = chr(ord(col_n) + 1)
+        col_num += 1
+        col_name = chr(ord(col_name) + 1)
 
-      row += 1
-      row_n -= 1
+      row_num += 1
+      row_name -= 1
 
     rack = Frame(out_f, pady=15, bg='azure')
     rack.pack(side=TOP)
 
     for i in range(7):
-      t = RackTile(rack)
-      t.bind('<1>', self.place_tile)
-      t['bg'] = '#BE975B'
+      tile = RackTile(rack)
+      tile.bind('<1>', self.place_tile)
+      tile['bg'] = '#BE975B'
 
+      # In the normal mode, conceal the letters so others can't see
       if self.norm_mode:
-        t['fg'] = '#BE975B'
+        tile['fg'] = '#BE975B'
 
-      self.rack.append(t)
+      self.rack.append(tile)
 
     button_f = Frame(out_f, bg='azure')
     button_f.pack(side=TOP)
 
-    self.sub = Button(button_f, text='Submit', command=self.process_word)
+    self.sub = Button(button_f, text='Submit')
+    self.sub.config(command=self.process_word)
     self.sub.pack(side=LEFT, padx=5)
 
-    self.pas = Button(button_f, text='Pass', command=lambda: self.show_popup('Pass Letters', 'Enter letters to pass:', 'Pass', self.pass_letters))
+    self.pas = Button(button_f, text='Pass')
+    self.pas.config(command=lambda: self.show_popup('Pass Letters', 'Enter letters to pass:', 'Pass', self.pass_letters))
     self.pas.pack(side=LEFT, padx=5)
 
     if self.chal_mode:
-      self.chal = Button(button_f, text='Challenge', command=self.challenge)
+      self.chal = Button(button_f, text='Challenge')
+      self.chal.config(command=self.challenge)
       self.chal.pack(side=LEFT, padx=5)
 
     if self.norm_mode:
-      Button(button_f, text='Reveal', command=self.reveal).pack()
+      Button(button_f, text='Reveal', command=self.reveal_tile).pack()
 
-  def determine_background(self, t):
-    if t.name in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
-      t['bg'] = '#ff3300'
-    elif t.name in 'h8 b2 c3 d4 e5 b14 c13 d12 e11 n2 m3 l4 k5 n14 m13 l12 k11'.split():
-      t['bg'] = '#ff99cc'
-    elif t.name in 'b6 b10 n6 n10 f2 f6 f10 f14 j2 j6 j10 j14'.split():
-      t['bg'] = '#3366ff'
-    elif t.name in 'a4 a12 c7 c9 d1 d8 d15 g3 g7 g9 g13 h4 h12 o4 o12 m7 m9 l1 l8 l15 i3 i7 i9 i13'.split():
-      t['bg'] = '#b3c6ff'
+  def determine_tile_background(self, tile):
+    if tile.name in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
+      tile['bg'] = '#ff3300'
+    elif tile.name in 'h8 b2 c3 d4 e5 b14 c13 d12 e11 n2 m3 l4 k5 n14 m13 l12 k11'.split():
+      tile['bg'] = '#ff99cc'
+    elif tile.name in 'b6 b10 n6 n10 f2 f6 f10 f14 j2 j6 j10 j14'.split():
+      tile['bg'] = '#3366ff'
+    elif tile.name in 'a4 a12 c7 c9 d1 d8 d15 g3 g7 g9 g13 h4 h12 o4 o12 m7 m9 l1 l8 l15 i3 i7 i9 i13'.split():
+      tile['bg'] = '#b3c6ff'
     else:
-      t['bg'] = '#ffd6cc'
+      tile['bg'] = '#ffd6cc'
 
-  def reveal(self):
-    for t in self.rack:
-      t['fg'] = 'black'
+  def reveal_tile(self):
+    for tile in self.rack:
+      tile['fg'] = 'black'
 
   def draw_info_frame(self):
     info_frame = Frame(self, bg='azure')
     info_frame.pack(side=LEFT, fill=BOTH)
 
-    self.sav = Button(info_frame, text='Save Game', command=self.save_game)
+    self.sav = Button(info_frame, text='Save Game')
+    self.sav.config(command=self.save_game)
     self.sav.pack(side=TOP, pady=50)
 
-    f = Frame(info_frame, bg='azure')
-    f.pack(side=TOP, pady=40, fill=X)
+    cont_f = Frame(info_frame, bg='azure')
+    cont_f.pack(side=TOP, pady=40, fill=X)
 
     options = {'font': ('times', 15, 'italic'), 'bg': 'azure', 'fg': '#004d00'}
 
     if self.time_limit:
-      Label(f, textvariable=self.time_var, font=('times', 15, 'italic'), bg='#004d00', fg='azure').pack(anchor=NW)
+      l = Label(cont_f, textvariable=self.time_info)
+      l.config(font=('times', 15, 'italic'), bg='#004d00', fg='azure')
+      l.pack(anchor=NW)
 
-    Label(f, textvariable=self.bag_var, **options).pack(pady=10)
+    Label(cont_f, textvariable=self.bag_info, **options).pack(pady=10)
 
-    lf = LabelFrame(f, pady=5, padx=5, bg='azure')
-    lf.pack(anchor=NW)
+    play_f = LabelFrame(cont_f, pady=5, padx=5, bg='azure')
+    play_f.pack(anchor=NW)
 
-    self.pl1_var = StringVar()
-    Label(lf, textvariable=self.pl1_var, **options).pack(anchor=NW)
+    # For displaying players' names and points
+    self.pl1_info = StringVar()
+    Label(play_f, textvariable=self.pl1_info, **options).pack(anchor=NW)
 
-    self.pl2_var = StringVar()
-    Label(lf, textvariable=self.pl2_var, **options).pack(anchor=NW)
+    self.pl2_info = StringVar()
+    Label(play_f, textvariable=self.pl2_info, **options).pack(anchor=NW)
 
     if self.play_num >= 3:
-      self.pl3_var = StringVar()
-      Label(lf, textvariable=self.pl3_var, **options).pack(anchor=NW)
+      self.pl3_info = StringVar()
+      Label(play_f, textvariable=self.pl3_info, **options).pack(anchor=NW)
 
     if self.play_num == 4:
-      self.pl4_var = StringVar()
-      Label(lf, textvariable=self.pl4_var, **options).pack(anchor=NW)
+      self.pl4_info = StringVar()
+      Label(play_f, textvariable=self.pl4_info, **options).pack(anchor=NW)
 
-    Label(f, text='Words:', **options).pack(anchor=NW, pady=10)
+    Label(cont_f, text='Words:', **options).pack(anchor=NW, pady=10)
 
-    Message(f, textvariable=self.words_var, font=('times', 14, 'italic'), anchor=NW, bg='azure', fg='#004d00').pack(anchor=NW, fill=X)
+    # For displaying the words made and their point values
+    m = Message(cont_f, textvariable=self.words_info)
+    m.config(font=('times', 14, 'italic'), anchor=NW, bg='azure', fg='#004d00')
+    m.pack(anchor=NW, fill=X)
 
   def set_word_info(self, words):
-    mes = ''
+    message = ''
 
-    for w in words:
-      mes = mes + ('{} {}\n'.format(w, words[w]))
+    for word in words:
+      message = message + ('{} {}\n'.format(word, words[word]))
 
     if self.cur_player.full_bonus:
-      mes = mes + ('\nBonus 60\n')
+      message = message + ('\nBonus 60\n')
       self.cur_player.full_bonus = False
 
-    self.words_var.set(mes[:-1])
+    self.words_info.set(message[:-1])
 
+  # For passing letters and setting wild tile
   def show_popup(self, title_text, label_text, button_text, command):
     if button_text == 'Set':
-      self.changing_wild_tile = True
+      self.setting_wild_tile = True
 
-    w = Toplevel(self)
-    w.title(title_text)
+    pop = Toplevel(self)
+    pop.title(title_text)
 
-    w.protocol('WM_DELETE_WINDOW', lambda: self.cancel_popup(w))
+    pop.protocol('WM_DELETE_WINDOW', lambda: self.cancel_popup(pop))
 
-    f = Frame(w)
-    f.pack(side=TOP)
+    main_f = Frame(pop)
+    main_f.pack(side=TOP)
 
+    # Show popup inside the main window
     self.master.master.update()
     x = self.master.master.winfo_rootx() + 200
-    w.geometry("+{}+{}".format(x, 300))
+    pop.geometry("+{}+{}".format(x, 300))
 
-    Label(f, text=label_text).pack(side=LEFT)
+    Label(main_f, text=label_text).pack(side=LEFT)
 
-    e = Entry(f)
-    e.pack(side=LEFT)
-    e.focus()
+    ent = Entry(main_f)
+    ent.pack(side=LEFT)
+    ent.focus()
 
-    bf = Frame(w)
-    bf.pack(side=BOTTOM)
+    button_f = Frame(pop)
+    button_f.pack(side=BOTTOM)
 
-    Button(bf, text=button_text, command=lambda: command(e)).pack(side=LEFT)
-    Button(bf, text='Cancel', command=lambda: self.cancel_popup(w)).pack()
+    Button(button_f, text=button_text, command=lambda: command(ent)).pack(side=LEFT)
+    Button(button_f, text='Cancel', command=lambda: self.cancel_popup(pop)).pack()
 
-    w.grab_set()
-    w.focus_set()
-    w.wait_window()
+    pop.grab_set()
+    pop.focus_set()
+    pop.wait_window()
 
-  def cancel_move(self):
-    for t1, t2 in zip(self.empty_tiles, self.letters.values()):
+  # Undo tile placement and word formation
+  def undo_placement(self):
+    for t1, t2 in zip(self.empty_rack_tiles, self.placed_tiles.values()):
       t1.letter.set(t2.letter.get())
       t2.letter.set('')
       t1['bg'] = '#BE975B'
-      self.determine_background(t2)
 
-    self.letters = {}
+      self.determine_tile_background(t2)
+
+    self.placed_tiles = {}
     self.may_proceed = False
 
+  # For passing letters and setting wild tile
   def cancel_popup(self, popup):
     popup.destroy()
 
-    if self.changing_wild_tile:
-      self.cancel_move()
-      self.changing_wild_tile = False
+    if self.setting_wild_tile:
+      self.undo_placement()
+      self.setting_wild_tile = False
 
   def initialize_game(self):
+    # If the game is not on the lan, start countdown right away.
+    # If it is on the lan, wait for others to join
     if self.time_limit and not self.lan_mode:
       self.countdown()
 
     self.check_game_over()
 
+    # No need to create new players if a saved game is loaded or joined a game on lan
     if self.lan_mode and not self.joined_lan:
       t = threading.Thread(target=self.create_server, args=(self.options, self.queue, self.bag))
       t.start()
     elif self.joined_lan:
       self.players, self.bag = self.queue.get()
-      self.initialize_players()
+      self.init_turn()
+    elif self.loading:
+      # If a saved game is being loaded, it is good to wait
+      # for one second and load the board so that variables are set
+      self.master.master.after(1000, self.load_board)
     else:
       self.initialize_players()
 
   def create_server(self, options, queue, bag):
-    mark = 0
+    # Server goes first
+    own_mark = 0
     cur_play_mark = 0
+
     lan_players = []
-    abled = True
+    play_num = options['play_num']
 
-    ser = socket.socket()
+    server = socket.socket()
 
-    ser.bind(('', 11235))
-    ser.listen()
+    server.bind(('', 11235))
+    server.listen()
 
-    for i in range(1, options['players']):
-      cli, addr = ser.accept()
+    # Let players join the game and add their names into options before
+    # serving them the options .The range starts from 1 because it doesn't
+    # include the player initializing the server.
+    for i in range(1, options['play_num']):
+      cli, addr = server.accept()
       lan_players.append(cli)
-      name = cs.recv_msg(cli)
-      name = pickle.loads(name)
+      name = pickle.loads(cs.recv_msg(cli))
       options['names'].append(name)
 
     opts = pickle.dumps(options)
 
-    for i, pl in enumerate(lan_players):
-      cs.send_msg(pl, pickle.dumps((opts, i + 1)))
+    # m is each joined player's mark to determine their turn
+    for m, pl in enumerate(lan_players):
+      cs.send_msg(pl, pickle.dumps((opts, m + 1)))
 
     self.initialize_players()
 
@@ -325,75 +357,77 @@ class GamePage(Frame):
       self.countdown()
 
     while self.game_online:
-      if cur_play_mark != 0:
-        source = lan_players[cur_play_mark - 1]
+      if cur_play_mark != own_mark:
+        # - 1 because lan_players array size is play_num - 1
+        player = lan_players[cur_play_mark - 1]
 
-        pack = cs.recv_msg(source)
+        turn_pack = cs.recv_msg(player)
 
-        if pack[0] != mark:
+        # Prevent the own turn_pack to be put in the queue
+        if turn_pack[0] != own_mark:
+          queue.put(pickle.loads(turn_pack))
 
-          queue.put(pickle.loads(pack))
+          for mark, pl in enumerate(lan_players):
+            # Prevent sending the received turn_pack to go back
+            if mark != cur_play_mark - 1:
+              cs.send_msg(pl,turn_pack)
 
-          for i, pl in enumerate(lan_players):
-            if i != cur_play_mark - 1:
-              cs.send_msg(pl,pack)
-
+          # Wait till queue is empty so that the same turn_pack
+          # isn't evaluated twice
           while not queue.empty():
             continue
 
-          if type(pickle.loads(pack)[1]) != type(True) or not pickle.loads(pack)[1]:
-            cur_play_mark = (cur_play_mark + 1) % options['players']
+          cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
       else:
-        pack = queue.get()
+        turn_pack = queue.get()
 
         for pl in lan_players:
-          cs.send_msg(pl, pickle.dumps(pack))
-          
-        if type(pack[1]) != type(True) or not pack[1]:
-          cur_play_mark = (cur_play_mark + 1) % options['players']
+          cs.send_msg(pl, pickle.dumps(turn_pack))
+        
+        cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
 
-    ser.close()
+    server.close()
 
   def handle_lan_game(self, options, queue):
     cur_play_mark = 0
 
-    sock = cs.find_server()
+    # Automatically detect server ip and connect to it
+    server = cs.find_server()
 
-    cs.send_msg(sock, pickle.dumps(options['names'][0]))
+    cs.send_msg(server, pickle.dumps(options['names'][0]))
 
-    options, mark = pickle.loads(cs.recv_msg(sock))
-
+    options, own_mark = pickle.loads(cs.recv_msg(server))
     options = pickle.loads(options)
+    queue.put((options, own_mark))
 
-    queue.put((options, mark))
+    play_num = options['play_num']
 
-    players, bag = pickle.loads(cs.recv_msg(sock))
-    
+    players, bag = pickle.loads(cs.recv_msg(server))
     queue.put((players, bag))
 
     if options['time_limit']:
       self.countdown()
 
     while self.game_online:
-      if mark == cur_play_mark:
-        pack = queue.get()
-        cs.send_msg(sock, pickle.dumps(pack))
+      if own_mark == cur_play_mark:
+        turn_pack = queue.get()
+        cs.send_msg(server, pickle.dumps(turn_pack))
 
-        if type(pack[1]) != type(True) or not pack[1]:
-          cur_play_mark = (cur_play_mark + 1) % options['players']
+        cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
       else:
-        pack = pickle.loads(cs.recv_msg(sock))
+        turn_pack = pickle.loads(cs.recv_msg(server))
 
-        if pack[0] != mark:
-          queue.put(pack)
+        # If a player is not challenged, the first element of turn_pack is 
+        # a player's mark. This prevents accidentally receiving own turn_pack
+        if turn_pack[0] != own_mark:
+          queue.put(turn_pack)
           
-          if type(pack[1]) != type(True) or not pack[1]:
-            cur_play_mark = (cur_play_mark + 1) % options['players']
+          cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
 
           while not queue.empty():
             continue
 
-    sock.close()
+    server.close()
 
   def countdown(self):
     if self.seconds == 0:
@@ -408,7 +442,7 @@ class GamePage(Frame):
       else:
         seconds = '0' + str(self.seconds)
 
-      self.time_var.set('{}:{} Left'.format(self.minutes, seconds))
+      self.time_info.set('{}:{} Left'.format(self.minutes, seconds))
       self.master.master.after(1000, self.countdown)
     else:
       self.time_up = True
@@ -416,69 +450,77 @@ class GamePage(Frame):
       self.end_game()
 
   def initialize_players(self):
-    if not self.loading and not self.joined_lan:
-      for i in range(self.play_num):
-        pl = Player(self.players[i])
-        pl.draw_letters(self.bag)
-        self.players.append(pl)
+    for i in range(self.play_num):
+      pl = Player(self.players[i])
+      pl.draw_letters(self.bag)
+      self.players.append(pl)
 
-        if self.comp_mode:
-          self.opponent = AIOpponent()
-          self.opponent.draw_letters(self.bag)
-          self.players.append(self.opponent)
+      # If the game is against a computer, no need for the second
+      # iteration because its class is different
+      if self.comp_mode:
+        self.opponent = AIOpponent()
+        self.opponent.draw_letters(self.bag)
+        self.players.append(self.opponent)
 
-          break
+        break
 
-      del self.players[:self.play_num]
+    # Deletes the name strings
+    del self.players[:self.play_num]
 
+    if self.lan_mode:
       self.queue.put(self.players)
 
-    if self.loading:
-      self.master.master.after(1000, self.load_game)
-    else:
-      self.switch_player()
+    self.init_turn()
 
-  def load_game(self):
-    keys = []
-    values = []
+  # Set the words of the loaded game on the board
+  def load_board(self):
+    spots = []
+    letters = []
 
-    for key, value in self.board.board.items():
-      if re.fullmatch('[A-Z@]', value):
-        keys.append(key)
-        values.append(value)
+    for spot, letter in self.board.board.items():
+      if re.fullmatch('[A-Z@]', letter):
+        spots.append(spot)
+        letters.append(letter)
 
-    for key, value in self.gui_board.items():
-      if key in keys:
-        self.gui_board[key].letter.set(values[keys.index(key)])
-        self.gui_board[key].active = False
-        self.gui_board[key]['bg'] = '#BE975B'
+    for spot, letter in self.gui_board.items():
+      if spot in spots:
+        self.gui_board[spot].letter.set(letters[spots.index(spot)])
+        self.gui_board[spot].active = False
+        self.gui_board[spot]['bg'] = '#BE975B'
 
-        self.used_spots[key] = self.gui_board[key]
+        self.used_spots[spot] = self.gui_board[spot]
 
-    for key in keys:
-      del self.gui_board[key]
+    for spot in spots:
+      del self.gui_board[spot]
 
-    self.switch_player()
+    self.init_turn()
 
-  def switch_player(self):
+  def init_turn(self):
     if self.lan_mode and not self.first_turn:
-      if self.mark == self.cur_play_mark:
+      if self.own_mark == self.cur_play_mark:
         self.disable_board()
-        if not self.failed:
-          self.queue.put((self.mark, self.word, self.sorted_keys, self.letters, self.old_letter_buffer, self.players, self.bag, self.board))
-        elif self.passed:
-          self.queue.put((self.mark, self.bag))
+        if not self.chal_failed:
+          self.queue.put((self.own_mark,
+                          self.word, 
+                          self.w_range, 
+                          self.placed_tiles, 
+                          self.prev_spots_buffer, 
+                          self.players, 
+                          self.bag, 
+                          self.board))
+        elif self.letters_passed:
+          self.queue.put((self.own_mark, self.bag))
         else:
-          self.queue.put((self.mark, False, None, None))
-      elif not self.challenged:
+          self.queue.put((self.own_mark, False, None, None))
+      elif not self.is_challenged:
         self.enable_board()
     elif self.joined_lan and self.first_turn:
       self.disable_board()
 
-    self.letters = {}
-    self.empty_tiles = []
-    self.letter_buffer = []
-    self.start = None
+    self.placed_tiles = {}
+    self.empty_rack_tiles = []
+    self.spots_buffer = []
+    self.start_tile = None
 
     if not self.comp_mode and not self.loading and not self.first_turn:
       self.cur_play_mark = (self.cur_play_mark + 1) % self.play_num
@@ -490,56 +532,76 @@ class GamePage(Frame):
 
     self.loading = False
     self.first_turn = False
-    self.failed = False
+    self.chal_failed = False
 
-    if self.lan_mode and self.mark != self.cur_play_mark:
+    if self.lan_mode and self.own_mark != self.cur_play_mark:
       self.process_word()
 
   def update_info(self):
-    if self.lan_mode and self.mark == self.cur_play_mark:
-      name = 'Your'
+    if self.comp_mode:
+      self.status_info.set('... Player\'s Turn ...')
+      self.bag_info.set('{} Tiles in Bag'.format(len(self.bag.bag)))
+      self.pl1_info.set('{}: {}'.format(self.players[0].name, self.players[0].score))
+      self.pl2_info.set('Computer: {}'.format(self.players[1].score))
     else:
-      name = self.cur_player.name + '\'s'
+      if self.lan_mode and self.own_mark == self.cur_play_mark:
+        name = 'Your'
+      else:
+        name = self.cur_player.name + '\'s'
 
-    self.status_var.set('... {} Turn ...'.format(name))
+      self.status_info.set('... {} Turn ...'.format(name))
 
-    self.pl1_var.set('{}: {}'.format(self.players[0].name, self.players[0].score))
-    self.pl2_var.set('{}: {}'.format(self.players[1].name, self.players[1].score))
+      self.pl1_info.set('{}: {}'.format(self.players[0].name, self.players[0].score))
+      self.pl2_info.set('{}: {}'.format(self.players[1].name, self.players[1].score))
 
-    if self.play_num >= 3:
-      self.pl3_var.set('{}: {}'.format(self.players[2].name, self.players[2].score))
+      if self.play_num >= 3:
+        self.pl3_info.set('{}: {}'.format(self.players[2].name, self.players[2].score))
 
-    if self.play_num == 4:
-      self.pl4_var.set('{}: {}'.format(self.players[3].name, self.players[3].score))
+      if self.play_num == 4:
+        self.pl4_info.set('{}: {}'.format(self.players[3].name, self.players[3].score))
 
-    self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
+      self.bag_info.set('{} Tiles in Bag'.format(len(self.bag.bag)))
 
   def decorate_rack(self):
-    if not self.lan_mode or self.lan_mode and self.mark == self.cur_play_mark:
-      for l, t in zip(self.cur_player.letters, self.rack):
-        if l == '@':
-          t.letter.set(' ')
+    # The challenged player is the previous player.
+    if self.is_challenged:
+      player = self.players[self.own_mark]
+    else:
+      player = self.cur_player
+
+    # If it is a game on lan, no need to show other players tiles on the rack
+    if not self.lan_mode or self.lan_mode and self.own_mark == self.cur_play_mark:
+      for letter, tile in zip(player.letters, self.rack):
+        if letter == '@':
+          tile.letter.set(' ')
         else:
-          t.letter.set(l)
+          tile.letter.set(letter)
 
-        t['bg'] = '#BE975B'
+        tile['bg'] = '#BE975B'
 
+        # Hide the letters on the board if it is a normal game.
+        # So that players can't see each others letters
         if self.norm_mode:
-          t['fg'] = '#BE975B'
+          tile['fg'] = '#BE975B'
 
+      # If there are no letters left, leave the spots of the used tiles blank
       if len(self.bag.bag) == 0:
-        for t in self.rack[len(self.cur_player.letters):]:
-          t.letter.set('')
-          t['bg'] = '#cccccc'
+        # Slice the rack array up to the length of player's letters array
+        for tile in self.rack[len(player.letters):]:
+          tile.letter.set('')
+          tile['bg'] = '#cccccc'
+    # If a player joins a game on lan, display his own letters on the 1st turn.
     elif self.joined_lan and self.first_turn:
-      for l, t in zip(self.players[self.mark].letters, self.rack):
-        if l == '@':
-          t.letter.set(' ')
+      for letter, tile in zip(self.players[self.own_mark].letters, self.rack):
+        if letter == '@':
+          tile.letter.set(' ')
         else:
-          t.letter.set(l)
+          tile.letter.set(letter)
 
-        t['bg'] = '#BE975B'
+        tile['bg'] = '#BE975B'
 
+  # Disable board and buttons when it is not a player's turn 
+  # so that they don't mess things up
   def disable_board(self):
     self.sub.config(state=DISABLED)
     self.pas.config(state=DISABLED)
@@ -548,9 +610,10 @@ class GamePage(Frame):
     if self.lan_mode and self.chal_mode:
       self.chal.config(state=DISABLED)
 
-    for k, v in self.gui_board.items():
-      self.gui_board[k].active = False
+    for spot in self.gui_board.values():
+      spot.active = False
 
+  # Enable board and buttons when it is player's turn
   def enable_board(self):
     self.sub.config(state=NORMAL)
     self.pas.config(state=NORMAL)
@@ -559,20 +622,20 @@ class GamePage(Frame):
     if self.lan_mode and self.chal_mode:
       self.chal.config(state=NORMAL)
 
-    for k, v in self.gui_board.items():
-      self.gui_board[k].active = True
+    for spot in self.gui_board.values():
+      spot.active = True
 
   def wait_comp(self):
     self.disable_board()
 
-    self.pl1_var.set('Player: {}'.format(self.cur_player.score))
-    self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
-    self.status_var.set('... Computer\'s Turn ...')
+    self.pl1_info.set('Player: {}'.format(self.cur_player.score))
+    self.bag_info.set('{} Tiles in Bag'.format(len(self.bag.bag)))
+    self.status_info.set('... Computer\'s Turn ...')
 
-    self.thread = threading.Thread(target=self.get_ai_move, args=())
-    self.thread.start()
+    t = threading.Thread(target=self.get_comp_move, args=())
+    t.start()
 
-  def get_ai_move(self):
+  def get_comp_move(self):
     word = self.opponent.get_move(self.bag, self.board, self.dict)
 
     if self.opponent.is_passing:
@@ -580,355 +643,404 @@ class GamePage(Frame):
     else:
       self.passes = 0
 
-      for s, l in zip(word.range, word.word):
-        if self.gui_board.get(s, False):
-          self.gui_board[s].letter.set(l)
-          self.gui_board[s]['bg'] = '#BE975B'
-          self.gui_board[s].active = False
+      for spot, letter in zip(word.range, word.word):
+        if self.gui_board.get(spot, False):
+          self.gui_board[spot].letter.set(letter)
+          self.gui_board[spot]['bg'] = '#BE975B'
+          self.gui_board[spot].active = False
 
-          self.used_spots[s] = self.gui_board[s]
+          self.used_spots[spot] = self.gui_board[spot]
 
-          del self.gui_board[s]
-
-      self.set_word_info(word.words)
+          del self.gui_board[spot]
 
       self.opponent.update_rack(self.bag)
       self.opponent.update_score()
+
+      self.set_word_info(word.words)
       self.decorate_rack()
 
       self.board.place(word.word, word.range)
 
-    self.normalize_board()
-
-  def update_rack(self):
-    if self.challenged:
-      player = self.players[self.mark]
-    else:
-      player = self.cur_player
-
-    for rt, l in zip(self.rack, player.letters):
-      rt.letter.set(l)
-      rt['bg'] = '#BE975B'
-
-    if len(self.bag.bag) == 0:
-      for i, rt in enumerate(self.rack):
-        rt['bg'] = '#BE975B'
-        if i == len(self.cur_player.letters) - 1:
-          break
-
-  def normalize_board(self):
     self.enable_board()
-
-    self.status_var.set('... Player\'s Turn ...')
-    self.bag_var.set('{} Tiles in Bag'.format(len(self.bag.bag)))
-    self.pl2_var.set('Computer: {}'.format(self.players[1].score))
+    self.init_turn()
 
   def place_tile(self, event):
-    start_name = type(self.start).__name__
-    widget_name = type(event.widget).__name__
-    widget_var = event.widget.letter
+    start_t_name = type(self.start_tile).__name__
+    end_tile = event.widget
+    end_t_name = type(end_tile).__name__
+    end_t_letter = end_tile.letter
 
-    if start_name == 'RackTile' and self.start.letter.get() != '':
-      if widget_name == 'BoardTile' and event.widget.active:
-        if widget_var.get() == '':
-          widget_var.set(self.start.letter.get())
-          event.widget['bg'] = self.start['bg']
+    if start_t_name == 'RackTile' and self.start_tile.letter.get() != '':
+      if end_t_name == 'BoardTile' and end_tile.active:
+        if end_t_letter.get() == '':
+          end_t_letter.set(self.start_tile.letter.get())
+          end_tile['bg'] = self.start_tile['bg']
 
-          self.letters[event.widget.name] = event.widget
-          self.letter_buffer.append(event.widget.name)
-          self.empty_tiles.append(self.start)
+          self.placed_tiles[end_tile.name] = end_tile
+          self.spots_buffer.append(end_tile.name)
+          self.empty_rack_tiles.append(self.start_tile)
 
-          self.start['bg'] = '#cccccc'
-          self.start.letter.set('')
-          self.start = None
-      elif widget_name == 'RackTile':
-        temp = widget_var.get()
-        widget_var.set(self.start.letter.get())
-
-        if event.widget in self.empty_tiles:
-          self.empty_tiles.append(self.start)
-          del self.empty_tiles[self.empty_tiles.index(event.widget)]
-
-          event.widget['bg'] = '#BE975B'
-          self.start['bg'] = '#cccccc'
-
-        self.start.letter.set(temp)
-        self.start = None
-      else:
-        self.start = None
-    elif start_name == 'BoardTile' and self.start.letter.get() != '' and self.start.active:
-      if widget_name == 'RackTile' and widget_var.get() == '':
-        del self.letters[self.start.name]
-        del self.empty_tiles[self.empty_tiles.index(event.widget)]
-
-        self.letter_buffer.remove(self.start.name)
-
-        widget_var.set(self.start.letter.get())
-        event.widget['bg'] = '#BE975B'
-
-        self.determine_background(self.start)
-
-        self.start.letter.set('')
-        self.start = None
-      elif widget_name == 'BoardTile' and event.widget.active:
-        if widget_var.get() == '':
-          widget_var.set(self.start.letter.get())
-          event.widget['bg'] = self.start['bg']
-
-          self.update_buffer_letters(event.widget)
-          self.determine_background(self.start)
-
-          del self.letters[self.start.name]
-
-          self.letters[event.widget.name] = event.widget
-
-          self.start.letter.set('')
-          self.start = None
-        elif widget_var.get() == self.start.letter.get():
-          self.start = None
+          self.start_tile['bg'] = '#cccccc'
+          self.start_tile.letter.set('')
+          self.start_tile = None
         else:
-          temp = widget_var.get()
-          widget_var.set(self.start.letter.get())
-          self.start.letter.set(temp)
+          temp = end_t_letter.get()
+          end_t_letter.set(self.start_tile.letter.get())
+          self.start_tile.letter.set(temp)
+          self.start_tile = None
+      elif end_t_name == 'RackTile':
+        temp = end_t_letter.get()
+        end_t_letter.set(self.start_tile.letter.get())
 
-          self.update_buffer_letters(event.widget)
+        if end_tile in self.empty_rack_tiles:
+          self.empty_rack_tiles.append(self.start_tile)
+          del self.empty_rack_tiles[self.empty_rack_tiles.index(end_tile)]
 
-          self.letters[self.start.name] = self.start
-          self.letters[event.widget.name] = event.widget
-          self.start = None
+          end_tile['bg'] = '#BE975B'
+          self.start_tile['bg'] = '#cccccc'
+
+        self.start_tile.letter.set(temp)
+        self.start_tile = None
+      else:
+        self.start_tile = None
+    elif start_t_name == 'BoardTile' and self.start_tile.letter.get() != '' and self.start_tile.active:
+      if end_t_name == 'RackTile' and end_t_letter.get() == '':
+        del self.placed_tiles[self.start_tile.name]
+        del self.empty_rack_tiles[self.empty_rack_tiles.index(end_tile)]
+
+        self.spots_buffer.remove(self.start_tile.name)
+
+        end_t_letter.set(self.start_tile.letter.get())
+        end_tile['bg'] = '#BE975B'
+
+        self.determine_tile_background(self.start_tile)
+
+        self.start_tile.letter.set('')
+        self.start_tile = None
+      elif end_t_name == 'BoardTile' and end_tile.active:
+        if end_t_letter.get() == '':
+          end_t_letter.set(self.start_tile.letter.get())
+          end_tile['bg'] = self.start_tile['bg']
+
+          self.update_buffer_letters(end_tile)
+          self.determine_tile_background(self.start_tile)
+
+          del self.placed_tiles[self.start_tile.name]
+
+          self.placed_tiles[end_tile.name] = end_tile
+
+          self.start_tile.letter.set('')
+          self.start_tile = None
+        elif end_t_letter.get() == self.start_tile.letter.get():
+          self.start_tile = None
+        else:
+          temp = end_t_letter.get()
+          end_t_letter.set(self.start_tile.letter.get())
+          self.start_tile.letter.set(temp)
+
+          self.update_buffer_letters(end_tile)
+
+          self.placed_tiles[self.start_tile.name] = self.start_tile
+          self.placed_tiles[end_tile.name] = end_tile
+          self.start_tile = None
+      else:
+        temp = end_t_letter.get()
+        end_t_letter.set(self.start_tile.letter.get())
+        self.start_tile.letter.set(temp)
+        self.start_tile = None
     else:
-      self.start = event.widget
+      self.start_tile = end_tile
 
   def update_buffer_letters(self, tile):
-    for it in self.letter_buffer:
-      if it == self.start.name:
-        self.letter_buffer.remove(it)
-        self.letter_buffer.append(tile.name)
+    for spot in self.spots_buffer:
+      if spot == self.start_tile.name:
+        self.spots_buffer.remove(spot)
+        self.spots_buffer.append(tile.name)
 
-  def process_word(self):
-    if self.lan_mode and self.mark != self.cur_play_mark:
-      if self.queue.empty():
-        self.may_proceed = False
-        self.master.master.after(1000, self.process_word)
-      else:
-        pack = self.queue.get()
+  def get_lan_move(self):
+    if self.queue.empty():
+      self.may_proceed = False
+      self.master.master.after(1000, self.process_word)
+    else:
+      pack = self.queue.get()
 
-        if len(pack) == 2:
-          self.bag = pack[1]
-        elif type(pack[1]) == type(True):
-          if pack[1]:
-            self.challenged = True
-            self.challenge(pack)
-            self.master.master.after(1000, self.process_word)
-          else:
-            self.challenge()
+      if len(pack) == 2:
+        self.bag = pack[1]
+      elif type(pack[1]) == type(True):
+        # In this case, pack[1] is the flag for being challenged successfully or not
+        if pack[1]:
+          self.is_challenged = True
+          self.challenge(pack)
+          self.master.master.after(1000, self.process_word)
         else:
-          self.may_proceed = True
-          self.challenged = False
-          mark, self.word, self.sorted_keys, letters, self.old_letter_buffer, self.players, self.bag, self.board = pack
-          self.word.new = True
-
-          for s, l in letters.items():
-            self.letters[s] = self.gui_board[s]
-            self.letters[s].letter.set(l)
-    elif self.letters:
-      self.sorted_keys = sorted(self.letters)
-
-      self.raw_word = []
-
-      if len(self.sorted_keys) == 1:
-        r = chr(ord(self.sorted_keys[0][0]) + 1) + self.sorted_keys[0][1:]
-        l = chr(ord(self.sorted_keys[0][0]) - 1) + self.sorted_keys[0][1:]
-
-        if re.fullmatch('[A-Z@]', self.board.board[r]) or re.fullmatch('[A-Z@]', self.board.board[l]):
-          self.direction = 'r'
-        else:
-          self.direction = 'd'
-      else:
-        check1 = self.sorted_keys[0][0]
-        check2 = self.sorted_keys[-1][0]
-
-        if check1 == check2:
-          digits = sorted([int(x[1:]) for x in self.sorted_keys])
-          self.sorted_keys = [check1 + str(x) for x in digits]
-          self.sorted_keys.reverse()
-
-          self.direction = 'd'
-        else:
-          self.direction = 'r'
-
-      self.aob_list = []
-
-      for key in self.sorted_keys:
-        self.raw_word.append(self.letters[key].letter.get())
-        self.set_aob_list(key)
-
-      offset = 0
-      length = len(self.sorted_keys)
-
-      for spot, index, letter in self.aob_list:
-        if index < 0:
-          index = 0
-        elif index > length:
-          index = length - 1
-
-        self.raw_word.insert(index + offset, letter)
-        self.sorted_keys.insert(index + offset, spot)
-
-        offset += 1
-
-      self.raw_word = ''.join(self.raw_word)
-
-      if ' ' in self.raw_word:
-        self.show_popup('Set Wild Tile', 'Enter a letter:', 'Set', self.change_wild_tile)
-
-      aob_list = [x[2] for x in self.aob_list]
-
-      self.word = Word(self.sorted_keys[0], self.direction, self.raw_word, self.board, self.dict, aob_list, self.chal_mode)
-
-      if not self.valid_sorted_letters():
-        self.may_proceed = False
+          self.challenge()
       else:
         self.may_proceed = True
+        self.is_challenged = False
+        # pack[0] is a number significant for create_server and handle_lan_game
+        self.word, self.w_range, received_tiles, self.prev_spots_buffer, self.players, self.bag, self.board = pack[1:]
+        # It is a new word for the receiver
+        self.word.new = True
 
+        # Should populate placed_tiles because there were no clicks on this side.
+        for spot, letter in received_tiles.items():
+          self.placed_tiles[spot] = self.gui_board[spot]
+          self.placed_tiles[spot].letter.set(letter)
+
+  def get_norm_move(self):
+    self.w_range = sorted(self.placed_tiles)
+    self.raw_word = []
+
+    # If there is only one letter in the list, find its direction
+    if len(self.w_range) == 1:
+      # Get the spots on the right and left side by changing letter value of the spot
+      r = chr(ord(self.w_range[0][0]) + 1) + self.w_range[0][1:]
+      l = chr(ord(self.w_range[0][0]) - 1) + self.w_range[0][1:]
+
+      # Check the spots on the left and right side
+      # If they are occupied, the direction is r. If not, d.
+      if re.fullmatch('[A-Z@]', self.board.board[r]) or re.fullmatch('[A-Z@]', self.board.board[l]):
+        self.direction = 'r'
+      else:
+        self.direction = 'd'
+    else:
+      # use letter parts of the first and last spots for checking
+      check1 = self.w_range[0][0]
+      check2 = self.w_range[-1][0]
+
+      # If letters are the same, direction is down
+      if check1 == check2:
+        # Need to sort number parts of the spots as digits for accuracy
+        digits = sorted([int(x[1:]) for x in self.w_range])
+        self.w_range = [check1 + str(x) for x in digits]
+        self.w_range.reverse()
+
+        self.direction = 'd'
+      else:
+        self.direction = 'r'
+
+    # Array for letters already on board and are included in the word made
+    self.aob_list = []
+
+    for spot in self.w_range:
+      self.raw_word.append(self.placed_tiles[spot].letter.get())
+      self.set_aob_list(spot)
+
+    # offset is necessary because array is mutable and it is dynamically
+    # changed as the loop continues
+    offset = 0
+    length = len(self.w_range)
+
+    for spot, index, letter in self.aob_list:
+      if index < 0:
+        index = 0
+      elif index > length:
+        index = length - 1
+
+      self.raw_word.insert(index + offset, letter)
+      self.w_range.insert(index + offset, spot)
+
+      offset += 1
+
+    self.raw_word = ''.join(self.raw_word)
+
+    if ' ' in self.raw_word:
+      self.show_popup('Set Wild Tile', 'Enter a letter:', 'Set', self.change_wild_tile)
+
+    # Just the letters are necessary for word object
+    aob_list = [x[2] for x in self.aob_list]
+
+    self.word = Word(self.w_range[0], self.direction, self.raw_word, self.board, self.dict, aob_list, self.chal_mode)
+
+    # Check if all the spots are on the same row or column
+    if not self.valid_sorted_letters():
+      self.may_proceed = False
+    else:
+      self.may_proceed = True
+
+  def process_word(self):
+    if self.lan_mode and self.own_mark != self.cur_play_mark:
+      self.get_lan_move()
+    elif self.placed_tiles:
+      self.get_norm_move()
     if self.may_proceed and type(self.word) != type(None) and self.word.new and self.word.validate():
       self.cur_player.word = self.word
-
       self.pass_num = 0
       self.wild_tile = None
       self.prev_words = []
 
-      for key in self.sorted_keys:
-        if key in self.letters:
-          self.letters[key].active = False
-          self.used_spots[key] = self.gui_board[key]
+      # Deactivate and disclude used spots
+      for spot in self.w_range:
+        if spot in self.placed_tiles:
+          self.placed_tiles[spot].active = False
+          self.used_spots[spot] = self.gui_board[spot]
 
-          del self.gui_board[key]
+          del self.gui_board[spot]
 
-      if not self.lan_mode or self.mark == self.cur_play_mark:
+      # On lan games, the game object of the current player updates rack and score of its own.
+      if not self.lan_mode or self.own_mark == self.cur_play_mark:
         self.cur_player.update_rack(self.bag)
         self.cur_player.update_score()
-        self.old_letter_buffer = self.letter_buffer.copy()
+        self.prev_spots_buffer = self.spots_buffer.copy()
 
       self.decorate_rack()
 
-      self.board.place(self.word.word, self.sorted_keys)
+      self.board.place(self.word.word, self.w_range)
 
       self.set_word_info(self.word.words)
 
       self.prev_words.append(self.word.word)
       self.prev_words.extend([x[0] for x in self.word.extra_words])
 
-      if self.lan_mode and self.mark != self.cur_play_mark:
-        for tile in self.letters.values():
+      # Get the background correct for the lan game words
+      # as there are no clicks on this side
+      if self.lan_mode and self.own_mark != self.cur_play_mark:
+        for tile in self.placed_tiles.values():
           tile['bg'] = '#BE975B'
 
+      # For lan game turn_packs, no tkinter objects, hence no tiles, for pickling.
+      # Spots and letters are enough
       if self.lan_mode:
-        self.letters = {x:y.letter.get() for x, y in self.letters.items()}
+        self.placed_tiles = {spot:tile.letter.get() for spot, tile in self.placed_tiles.items()}
 
-      if self.norm_mode or self.lan_mode or self.joined_lan:
-        self.switch_player()
-      else:
+      if self.comp_mode:
         self.wait_comp()
+      else:
+        self.init_turn()
     else:
       if self.wild_tile:
         self.wild_tile.letter.set(' ')
         self.wild_tile = None
 
   def set_aob_list(self, spot):
+    # Checks are to see if the spot is already on the list
+    # If aft or bef is not in the gui board, it was previusly placed on the board
+    # Otherwise, flag is false.
     flag = True
 
     if self.direction == 'd':
+      # Modify the number part of the spots
       bef = spot[0] + str(int(spot[1:]) + 1)
       aft = spot[0] + str(int(spot[1:]) - 1)
       check = [x[0] for x in self.aob_list if x[0] == aft or x[0] == bef]
 
       while flag and not check:
+        # range(1, 16) because there are 15 rows
         if aft not in self.gui_board and int(aft[1:]) in range(1, 16):
-          self.aob_list.append((aft, self.sorted_keys.index(spot) + 1, self.used_spots[aft].letter.get()))
+          self.aob_list.append((aft, self.w_range.index(spot) + 1, self.used_spots[aft].letter.get()))
           aft = aft[0] + str(int(aft[1:]) - 1)
         elif bef not in self.gui_board and int(bef[1:]) in range(1, 16):
-          self.aob_list.insert(0, (bef, self.sorted_keys.index(spot) - 1, self.used_spots[bef].letter.get()))
+          self.aob_list.insert(0, (bef, self.w_range.index(spot) - 1, self.used_spots[bef].letter.get()))
           bef = bef[0] + str(int(bef[1:]) + 1)
         else:
           flag = False
     else:
+      # Modify the letter part of the spots
       bef = chr(ord(spot[0]) - 1) + spot[1:]
       aft = chr(ord(spot[0]) + 1) + spot[1:]
       check = [x[0] for x in self.aob_list if x[0] == aft or x[0] == bef]
 
       while flag and not check:
+        # range(97, 112) because these are ascii codes fo the lower case letters a-o
         if aft not in self.gui_board and ord(aft[0]) in range(97, 112):
-          self.aob_list.append((aft, self.sorted_keys.index(spot) + 1, self.used_spots[aft].letter.get()))
+          self.aob_list.append((aft, self.w_range.index(spot) + 1, self.used_spots[aft].letter.get()))
           aft = chr(ord(aft[0]) + 1) + aft[1:]
         elif bef not in self.gui_board and ord(bef[0]) in range(97, 112):
-          self.aob_list.insert(0, (bef, self.sorted_keys.index(spot) - 1, self.used_spots[bef].letter.get()))
+          self.aob_list.insert(0, (bef, self.w_range.index(spot) - 1, self.used_spots[bef].letter.get()))
           bef = chr(ord(bef[0]) - 1) + bef[1:]
         else:
           flag = False
 
   def valid_sorted_letters(self):
     if self.direction == 'd':
-      check1 = int(self.sorted_keys[0][1:])
-      check2 = self.sorted_keys[0][0]
+      # Check1 is the number part of the spot
+      check1 = int(self.w_range[0][1:])
+      # Check2 is the letter part of the spot
+      check2 = self.w_range[0][0]
 
-      for key in self.sorted_keys[1:]:
-        if int(key[1:]) != check1 - 1:
+      # Skip first spot because it is already used in checks
+      for spot in self.w_range[1:]:
+        # Numbers should be consequent
+        if int(spot[1:]) != check1 - 1:
           return False
 
-        if key[0] != check2:
+        # Letters should be the same
+        if spot[0] != check2:
           return False
 
         check1 -= 1
     else:
-      check1 = ord(self.sorted_keys[0][0])
-      check2 = self.sorted_keys[0][1:]
-
-      for key in self.sorted_keys[1:]:
-        if ord(key[0]) != check1 + 1:
+      # Check1 is the ascii value for the letter part of the spot
+      check1 = ord(self.w_range[0][0])
+      # Check2 is the number part of the spot
+      check2 = self.w_range[0][1:]
+      # Skip first spot because it is already used in checks
+      for spot in self.w_range[1:]:
+        # letters should be consequent
+        if ord(spot[0]) != check1 + 1:
           return False
 
-        if key[1:] != check2:
+        # Numbers should be the same
+        if spot[1:] != check2:
           return False
 
         check1 += 1
 
     return True
 
-  def change_wild_tile(self, ent):
-    if re.fullmatch('[A-Z@]', ent.get().upper()):
-      self.raw_word = re.sub(' ', ent.get().upper(), self.raw_word)
+  def change_wild_tile(self, entry):
+    if re.fullmatch('[A-Z@]', entry.get().upper()):
+      self.raw_word = re.sub(' ', entry.get().upper(), self.raw_word)
 
-      for tile in self.letters:
-        if self.letters[tile].letter.get() == ' ':
-          self.wild_tile = self.letters[tile]
+      for spot in self.placed_tiles:
+        if self.placed_tiles[spot].letter.get() == ' ':
+          self.wild_tile = self.placed_tiles[spot]
 
           if self.chal_mode:
             self.wild_tile_clone = self.wild_tile
 
-          self.board.wild_tiles_on_board.append(self.wild_tile.name)
+          self.board.wild_letters_on_board.append(self.wild_tile.name)
 
-          self.letters[tile].letter.set(ent.get().upper())
+          self.placed_tiles[spot].letter.set(entry.get().upper())
 
-          self.cur_player.wild_tiles.append(ent.get().upper())
+          self.cur_player.wild_letters.append(entry.get().upper())
 
-      ent.master.master.destroy()
+      entry.master.master.destroy()
 
   def pass_letters(self, entry):
-    self.passed = True
+    self.letters_passed = True
 
-    for key, value in self.gui_board.items():
-      if value.letter.get() != '':
-        self.empty_tiles[0].letter.set(value.letter.get())
-        self.empty_tiles[0]['bg'] = '#BE975B'
-        del self.empty_tiles[0]
+    # Reset the gui board if any tiles are places before passing letters
+    # and put the tiles back on the rack
+    for tile in self.gui_board.values():
+      if tile.letter.get() != '':
+        self.empty_rack_tiles[0].letter.set(tile.letter.get())
+        self.empty_rack_tiles[0]['bg'] = '#BE975B'
+        del self.empty_rack_tiles[0]
 
-        value.letter.set('')
-        self.determine_background(value)
+        tile.letter.set('')
+        self.determine_tile_background(tile)
 
-    passed_letters = list(re.sub('[^A-Z@]', '', entry.get().upper()))
+    passed_letters = list(re.sub('[^A-Z ]', '', entry.get().upper()))
 
-    self.cur_player.set_passed_letters(passed_letters)
+    # If a player wants to change a wild letter
+    if ' ' in passed_letters and '@' in self.cur_player.letters:
+      count1 = self.cur_player.letters.count('@')
+      count2 = passed_letters.count(' ')
+
+      for i in range(count2):
+        passed_letters.remove(' ')
+        passed_letters.append('@')
+
+        if i == count1 - 1:
+          break
+
+    # Remove the remaining spaces
+    while ' ' in passed_letters:
+      passed_letters.remove(' ')
+
+    self.cur_player.passed_letters = passed_letters
+    self.bag.put_back(passed_letters)
 
     entry.master.master.destroy()
 
@@ -940,60 +1052,66 @@ class GamePage(Frame):
     if self.comp_mode:
       self.wait_comp()
     else:
-      self.switch_player()
+      self.init_turn()
 
   def challenge(self, pack=None):
-    if self.chal_mode:
-      for word in self.prev_words:
-        if not self.dict.valid_word(word):
-          self.players[self.cur_play_mark - 1].update_score(self.word.points)
+    for word in self.prev_words:
+      if not self.dict.valid_word(word):
+        self.players[self.cur_play_mark - 1].update_score(self.word.points)
 
-          if len(self.players[self.cur_play_mark - 1].new_letters) == 7:
-            self.players[self.cur_play_mark - 1].update_score(60)
+        # Substract full bonus if applicable
+        if len(self.players[self.cur_play_mark - 1].new_letters) == 7:
+          self.players[self.cur_play_mark - 1].update_score(60)
 
-          for new in self.players[self.cur_play_mark - 1].new_letters:
-            self.players[self.cur_play_mark - 1].letters.remove(new)
-            self.bag.put_back([new])
- 
-          for tile in self.old_letter_buffer:
-            if tile in self.used_spots:
-              if self.wild_tile_clone and tile == self.wild_tile_clone.name:
-                self.board.wild_tiles_on_board.remove(tile)
-                self.used_spots[tile].letter.set(' ')
-              else:
-                self.players[self.cur_play_mark -1].letters.append(self.used_spots[tile].letter.get())
-                self.used_spots[tile].letter.set('')
+        # Remove and return all the new letters
+        for letter in self.players[self.cur_play_mark - 1].new_letters:
+          self.players[self.cur_play_mark - 1].letters.remove(letter)
+          self.bag.put_back([letter])
+        
+        # Remove the letters of the challenged word and put them back on rack
+        for spot in self.prev_spots_buffer:
+          if spot in self.used_spots:
+            if self.wild_tile_clone and spot == self.wild_tile_clone.name:
+              self.board.wild_letters_on_board.remove(spot)
+              self.used_spots[spot].letter.set('')
+              self.players[self.cur_play_mark - 1].letters.append('@')
+            else:
+              self.players[self.cur_play_mark - 1].letters.append(self.used_spots[spot].letter.get())
+              self.used_spots[spot].letter.set('')
 
-              self.board.board[tile] = ' '
+            self.board.board[spot] = ' '
 
-              self.used_spots[tile].active = True
-              self.determine_background(self.used_spots[tile])
+            self.used_spots[spot].active = True
+            self.determine_tile_background(self.used_spots[spot])
 
-              self.gui_board[tile] = self.used_spots[tile]
+            self.gui_board[spot] = self.used_spots[spot]
 
-              del self.used_spots[tile]
+            del self.used_spots[spot]
 
-          self.prev_words = []
-          self.old_letter_buffer = []
+        self.prev_words = []
+        self.prev_spots_buffer = []
 
-          if not self.challenged:
-            self.queue.put((self.mark, True, self.players, self.bag))
-
-          if self.challenged:
+        if self.lan_mode:
+          if self.is_challenged:
+            # If the player is challenged on the lan
             self.players = pack[2]
             self.bag = pack[3]
-            self.update_rack()
+            self.decorate_rack()
+          else:
+            # If the challenger is the player
+            self.queue.put((self.own_mark, True, self.players, self.bag))
 
-          self.update_info()
+        self.update_info()
 
-          return True
-      
-      if self.lan_mode:
-        self.failed = True
+        return True
+    
+    # If challenge fails
+    if self.lan_mode:
+      self.chal_failed = True
 
-      self.switch_player()
+    self.init_turn()
 
-      return False
+    return False
 
   def check_game_over(self):
     if len(self.bag.bag) == 0:
@@ -1018,11 +1136,12 @@ class GamePage(Frame):
       self.master.master.after(1000, self.check_game_over)
 
   def end_game(self):
-    if not self.over:
-      self.over = True
+    if not self.game_over:
+      self.game_over = True
 
       if self.chal_mode and len(self.bag.bag) == 0 and [pl for pl in self.players if len(pl.letters) == 0]:
-        challenged = askyesno('Challenge', 'Will you challenge any of \'{}\'?'.format(', '.join(self.prev_words))) and self.challenge()
+        text = 'Will you challenge any of \'{}\'?'.format(', '.join(self.prev_words))
+        challenged = askyesno('Challenge', text) and self.challenge()
       else:
         challenged = False
 
@@ -1043,55 +1162,61 @@ class GamePage(Frame):
         self.check_game_over()
 
   def show_end_game_popup(self, reason, message):
-    w = Toplevel(self)
-    w.title(reason)
+    pop = Toplevel(self)
+    pop.title(reason)
 
+    # Show popup inside the main window
     self.master.master.update()
     x = self.master.master.winfo_rootx() + 200
-    w.geometry("+{}+{}".format(x, 300))
+    pop.geometry("+{}+{}".format(x, 300))
 
-    w.protocol('WM_DELETE_WINDOW', lambda: self.quit_game(w))
+    pop.protocol('WM_DELETE_WINDOW', lambda: self.quit_game(pop))
 
-    Label(w, text=message, font=('times', 30, 'italic')).pack(side=TOP, padx=50, pady=30)
+    Label(pop, text=message, font=('times', 30, 'italic')).pack(side=TOP, padx=50, pady=30)
 
-    f = Frame(w)
-    f.pack(side=TOP)
+    info_f = Frame(pop)
+    info_f.pack(side=TOP)
 
     if not self.point_limit and not self.time_limit:
-      for pl, sub in self.losers:
-        if sub > 0:
-          Label(f, text='{} {} points for {} left on rack...'.format(pl.name, -sub, ', '.join(pl.letters))).pack(side=TOP)
+      for player, subt in self.losers:
+        if subt > 0:
+          text = '{} {} points for {} left on rack...'.format(player.name, -subt, ', '.join(player.letters))
+          Label(info_f, text=text).pack(side=TOP)
 
-    bf = Frame(w)
-    bf.pack(side=TOP, pady=20)
+    button_f = Frame(pop)
+    button_f.pack(side=TOP, pady=20)
 
-    Button(bf, text='Quit', command=lambda: self.quit_game(w)).pack(side=LEFT, padx=15)
-    Button(bf, text='Restart', command=self.restart_game).pack(side=LEFT)
+    Button(button_f, text='Quit', command=lambda: self.quit_game(pop)).pack(side=LEFT, padx=15)
+    Button(button_f, text='Restart', command=self.restart_game).pack(side=LEFT)
 
-    w.grab_set()
-    w.focus_set()
-    w.wait_window()
+    pop.grab_set()
+    pop.focus_set()
+    pop.wait_window()
 
   def determine_winner(self):
     if not self.time_limit and not self.point_limit:
-      for pl in self.players:
-        sub = 0
-        for l in pl.letters:
-          sub += self.word.letter_points[l]
-          pl.update_score(self.word.letter_points[l])
+      # Substract the remaining letter values
+      for player in self.players:
+        subt = 0
+        for letter in player.letters:
+          subt += self.word.letter_points[letter]
+          player.update_score(self.word.letter_points[letter])
 
-        self.losers.append((pl, sub))
+        self.losers.append((player, subt))
 
-    pts = max([pl.score for pl in self.players])
-    ply = self.players[[pl.score for pl in self.players].index(pts)].name
+    points = max([player.score for player in self.players])
+    winner = self.players[[player.score for player in self.players].index(points)].name
 
-    self.winner = (ply, pts)
+    self.winner = (winner, points)
 
   def quit_game(self, win):
     win.destroy()
+    self.game_online = False
     self.master.master.quit()
 
   def restart_game(self):
+    self.game_online = False
+
     self.master.master.geometry('704x420')
     self.master.master.minsize(704, 420)
 
@@ -1111,7 +1236,7 @@ class GamePage(Frame):
       data['cur_play_mark'] = self.cur_play_mark
       data['chal_mode'] = self.chal_mode
       data['comp_mode'] = self.comp_mode
-      data['norm_mode'] = self.norm_mode
+      data['norm_mode'] = self.norm_mode or self.lan_mode
       data['point_limit'] = self.point_limit
       data['time_limit'] = self.time_limit
       data['bag'] = self.bag
@@ -1122,5 +1247,3 @@ class GamePage(Frame):
 
       file = open(filename, 'wb')
       pickle.dump(data, file)
-
-

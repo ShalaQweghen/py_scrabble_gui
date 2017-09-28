@@ -32,6 +32,7 @@ def recvall(sock, n):
 
 def find_own_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
     try:
         s.connect(('10.255.255.255', 1))
         ip = s.getsockname()[0]
@@ -42,30 +43,34 @@ def find_own_ip():
 
     return ip
 
-import re, threading
-
 def check_ip(ip, server):
 	s = socket.socket()
+
 	try:
-		serv = s.connect_ex((ip, 11235))
+		val = s.connect_ex((ip, 11235))
 	except socket.error:
 		s.close()
 
-	if serv == 0:
+	# connect_ex returns 0 if socket connects
+	if val == 0:
 		server.append(s)
-
 
 def find_server():
 	own_ip = find_own_ip()
+	# ip address except for the last number
 	base = re.match('(\d+\.\d+\.\d+\.)', own_ip).groups()[0]
+	# Use threads to make it faster
 	threads = []
+	# serv is an array in order to modify it in another method
 	serv = []
 
+	# Check all the possible ips in range
 	for i in range(0, 256):
 		ip = base + str(i)
 		threads.append(threading.Thread(target=check_ip, args=(ip, serv)))
 		threads[i].start()
 
+	# Join threads to wait all to finish before returning
 	for i in range(0, 256):
 		threads[i].join()
 
