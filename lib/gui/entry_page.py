@@ -36,22 +36,19 @@ class EntryPage(Frame):
   def start_computer_game(self):
     self.parent.master.set_geometry()
 
-    page = GamePage(self.parent, {'comp_mode': True, 'names': ['Player', 'Computer'], 'play_num': 2}, self.dict)
-    page.tkraise()
+    GamePage(self.parent, {'comp_mode': True, 'names': ['Player', 'Computer'], 'play_num': 2}, self.dict)
 
   def start_normal_game(self):
     self.parent.master.geometry("704x400")
     self.parent.master.minsize(704, 400)
 
-    page = NormalStartPage(self.parent, self.dict)
-    page.tkraise()
+    NormalStartPage(self.parent, self.dict)
 
   def start_lan_game(self):
     self.parent.master.geometry("704x450")
     self.parent.master.minsize(704, 450)
 
-    page = LANStartPage(self.parent, self.dict)
-    page.tkraise()
+    LANStartPage(self.parent, self.dict)
 
   def load_game(self):
     filename = askopenfilename(initialdir='./saves', filetypes=(('Pickle Files', '*.pickle'),))
@@ -87,6 +84,6 @@ class EntryPage(Frame):
 
     self.parent.master.set_geometry()
     
-    GamePage(self.parent, {'names': [name]})
+    self.parent.master.child = GamePage(self.parent, {'names': [name]})
 
 

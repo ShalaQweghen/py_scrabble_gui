@@ -16,6 +16,8 @@ class Root(Tk):
 
     self.dict = dic
 
+    self.child = None # Necessary for preventing lag in lan games
+
     ws = self.winfo_screenwidth()
     x = int((ws/2) - (704/2))
 
@@ -56,6 +58,7 @@ class Root(Tk):
 
   def quit_game(self):
     if askyesno('Quit Game', 'Are you sure to quit the game?'):
+      self.child.destroy()
       self.quit()
 
   def set_geometry(self):

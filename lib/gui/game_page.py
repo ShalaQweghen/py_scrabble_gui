@@ -33,8 +33,8 @@ class GamePage(Frame):
       self.resolve_options(options)  
     else:
       self.joined_lan = True
-      t = threading.Thread(target=self.handle_lan_game, args=(options,self.queue))
-      t.start()
+      self.thread = threading.Thread(target=self.handle_lan_game, args=(options,self.queue))
+      self.thread.start()
 
       self.resolve_options()
 
@@ -44,6 +44,7 @@ class GamePage(Frame):
 
   def set_variables(self):
     self.word = None
+    self.thread = None
     self.winner = None
     self.wild_tile = None
     self.cur_player = None
@@ -306,8 +307,8 @@ class GamePage(Frame):
 
     # No need to create new players if a saved game is loaded or joined a game on lan
     if self.lan_mode and not self.joined_lan:
-      t = threading.Thread(target=self.create_server, args=(self.options, self.queue, self.bag))
-      t.start()
+      self.thread = threading.Thread(target=self.create_server, args=(self.options, self.queue, self.bag))
+      self.thread.start()
     elif self.joined_lan:
       self.players, self.bag = self.queue.get()
       self.init_turn()
@@ -364,7 +365,7 @@ class GamePage(Frame):
         turn_pack = cs.recv_msg(player)
 
         # Prevent the own turn_pack to be put in the queue
-        if turn_pack[0] != own_mark:
+        if turn_pack and turn_pack[0] != own_mark:
           queue.put(pickle.loads(turn_pack))
 
           for mark, pl in enumerate(lan_players):
@@ -379,12 +380,13 @@ class GamePage(Frame):
 
           cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
       else:
-        turn_pack = queue.get()
+        if not queue.empty():
+          turn_pack = queue.get()
 
-        for pl in lan_players:
-          cs.send_msg(pl, pickle.dumps(turn_pack))
-        
-        cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
+          for pl in lan_players:
+            cs.send_msg(pl, pickle.dumps(turn_pack))
+          
+          cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
 
     server.close()
 
@@ -410,10 +412,11 @@ class GamePage(Frame):
 
     while self.game_online:
       if own_mark == cur_play_mark:
-        turn_pack = queue.get()
-        cs.send_msg(server, pickle.dumps(turn_pack))
+        if not queue.empty():
+          turn_pack = queue.get()
+          cs.send_msg(server, pickle.dumps(turn_pack))
 
-        cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
+          cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
       else:
         turn_pack = pickle.loads(cs.recv_msg(server))
 
@@ -1247,3 +1250,11 @@ class GamePage(Frame):
 
       file = open(filename, 'wb')
       pickle.dump(data, file)
+
+  # Necessary for preventing lag in lan games
+  def destroy(self):
+    if self.lan_mode:
+      self.game_online = False
+      self.thread.join()
+      
+    super().destroy()

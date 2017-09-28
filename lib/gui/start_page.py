@@ -103,7 +103,9 @@ class LANStartPage(StartPage):
 
     self.parent.master.set_geometry()
     
-    GamePage(self.parent, self.options)
+    self.parent.master.child = GamePage(self.parent, self.options)
+
+    self.destroy()
 
 ############################################################################
 
@@ -167,8 +169,7 @@ class NormalStartPage(StartPage):
 
       self.parent.master.set_geometry()
 
-      page = GamePage(self.parent, self.options, self.dict)
-      page.tkraise()
+      GamePage(self.parent, self.options, self.dict)
 
       self.destroy()
     else:
