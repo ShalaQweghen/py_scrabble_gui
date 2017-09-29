@@ -1,10 +1,8 @@
 # PyScrabble With GUI
 
-Complete with optional challenge mode, time limit, point limit and multiplayer on a single computer. You can choose different options from the game interface.
+Complete with optional challenge mode, time limit, point limit, multiplayer on a single computer and multiplayer over LAN. You can choose different options from the game interface.
 
 You can also play against computer.
-
-Multiplayer over LAN soon to be added.
 
 If you don't know how to play Scrabble, click [here](https://scrabble.hasbro.com/en-us/rules) for rules
 
@@ -33,6 +31,9 @@ A game of 2, 3 or 4 players can be played on a single computer. The letters on t
 ### Playing against computer
 
 Computer goes through permutations of letters on its rack and picks the valid move with the most points. A turn for computer takes about 1 minute 30 seconds (on i5 1.6 GHz with 8 GB RAM) depending on the computer.
+
+### Save a game
+If a game is saved during a LAN multiplayer game, it can be later loaded as a normal multiplayer game on a single machine.
 
 ### Screenshots
 

@@ -74,4 +74,7 @@ def find_server():
 	for i in range(0, 256):
 		threads[i].join()
 
-	return serv[0]
+	if serv:
+		return serv[0]
+	else:
+		return None

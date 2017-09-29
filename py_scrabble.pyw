@@ -58,7 +58,9 @@ class Root(Tk):
 
   def quit_game(self):
     if askyesno('Quit Game', 'Are you sure to quit the game?'):
-      self.child.destroy()
+      if self.child:
+        self.child.destroy()
+        
       self.quit()
 
   def set_geometry(self):

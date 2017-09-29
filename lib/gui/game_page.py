@@ -30,17 +30,22 @@ class GamePage(Frame):
     # There isn't a play_num key in the options, it is a game joined on lan
     if options.get('play_num', False):
       self.joined_lan = False
-      self.resolve_options(options)  
+      self.resolve_options(options) 
     else:
       self.joined_lan = True
       self.thread = threading.Thread(target=self.handle_lan_game, args=(options,self.queue))
       self.thread.start()
-
       self.resolve_options()
 
-    self.draw_main_frame()
-    self.draw_info_frame()
-    self.initialize_game()
+    self.run()
+
+  def run(self):
+    if self.server_not_found:
+      self.destroy()
+    else:
+      self.draw_main_frame()
+      self.draw_info_frame()
+      self.initialize_game()
 
   def set_variables(self):
     self.word = None
@@ -56,6 +61,7 @@ class GamePage(Frame):
     self.chal_failed = False
     self.is_challenged = False  # Necessary for lan game
     self.letters_passed = False # Necessary for lan game
+    self.server_not_found = False # Necessary for lan game
     self.setting_wild_tile = False
 
     self.first_turn = True
@@ -89,7 +95,13 @@ class GamePage(Frame):
 
   def resolve_options(self, options={}):
     if self.joined_lan:
-      self.options, self.own_mark = self.queue.get()
+      # If a server is not found, a single value False comes
+      # from the queue causing an exception.
+      try:
+        self.options, self.own_mark = self.queue.get()
+      except:
+        self.options = options
+        self.server_not_found = True
     else:
       self.options = options
 
@@ -394,43 +406,47 @@ class GamePage(Frame):
     cur_play_mark = 0
 
     # Automatically detect server ip and connect to it
+    # Server is None if no server is found
     server = cs.find_server()
 
-    cs.send_msg(server, pickle.dumps(options['names'][0]))
+    if server:
+      cs.send_msg(server, pickle.dumps(options['names'][0]))
 
-    options, own_mark = pickle.loads(cs.recv_msg(server))
-    options = pickle.loads(options)
-    queue.put((options, own_mark))
+      options, own_mark = pickle.loads(cs.recv_msg(server))
+      options = pickle.loads(options)
+      queue.put((options, own_mark))
 
-    play_num = options['play_num']
+      play_num = options['play_num']
 
-    players, bag = pickle.loads(cs.recv_msg(server))
-    queue.put((players, bag))
+      players, bag = pickle.loads(cs.recv_msg(server))
+      queue.put((players, bag))
 
-    if options['time_limit']:
-      self.countdown()
+      if options['time_limit']:
+        self.countdown()
 
-    while self.game_online:
-      if own_mark == cur_play_mark:
-        if not queue.empty():
-          turn_pack = queue.get()
-          cs.send_msg(server, pickle.dumps(turn_pack))
+      while self.game_online:
+        if own_mark == cur_play_mark:
+          if not queue.empty():
+            turn_pack = queue.get()
+            cs.send_msg(server, pickle.dumps(turn_pack))
 
-          cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
-      else:
-        turn_pack = pickle.loads(cs.recv_msg(server))
+            cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
+        else:
+          turn_pack = pickle.loads(cs.recv_msg(server))
 
-        # If a player is not challenged, the first element of turn_pack is 
-        # a player's mark. This prevents accidentally receiving own turn_pack
-        if turn_pack[0] != own_mark:
-          queue.put(turn_pack)
-          
-          cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
+          # If a player is not challenged, the first element of turn_pack is 
+          # a player's mark. This prevents accidentally receiving own turn_pack
+          if turn_pack[0] != own_mark:
+            queue.put(turn_pack)
+            
+            cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
 
-          while not queue.empty():
-            continue
+            while not queue.empty():
+              continue
 
-    server.close()
+      server.close()
+    else:
+      queue.put(False)
 
   def countdown(self):
     if self.seconds == 0:
@@ -540,6 +556,9 @@ class GamePage(Frame):
     if self.lan_mode and self.own_mark != self.cur_play_mark:
       self.process_word()
 
+    if self.comp_mode:
+      self.wait_comp()
+
   def update_info(self):
     if self.comp_mode:
       self.status_info.set('... Player\'s Turn ...')
@@ -635,37 +654,46 @@ class GamePage(Frame):
     self.bag_info.set('{} Tiles in Bag'.format(len(self.bag.bag)))
     self.status_info.set('... Computer\'s Turn ...')
 
-    t = threading.Thread(target=self.get_comp_move, args=())
+    t = threading.Thread(target=self.get_comp_move, args=(self.queue,))
     t.start()
 
-  def get_comp_move(self):
+    self.process_comp_word()
+
+  def get_comp_move(self, queue):
     word = self.opponent.get_move(self.bag, self.board, self.dict)
+    queue.put(word)
 
-    if self.opponent.is_passing:
-      self.passes += 1
+  def process_comp_word(self):
+    if self.queue.empty():
+      self.master.master.after(1000, self.process_comp_word)
     else:
-      self.passes = 0
+      word = self.queue.get()
 
-      for spot, letter in zip(word.range, word.word):
-        if self.gui_board.get(spot, False):
-          self.gui_board[spot].letter.set(letter)
-          self.gui_board[spot]['bg'] = '#BE975B'
-          self.gui_board[spot].active = False
+      if self.opponent.is_passing:
+        self.passes += 1
+      else:
+        self.passes = 0
 
-          self.used_spots[spot] = self.gui_board[spot]
+        for spot, letter in zip(word.range, word.word):
+          if self.gui_board.get(spot, False):
+            self.gui_board[spot].letter.set(letter)
+            self.gui_board[spot]['bg'] = '#BE975B'
+            self.gui_board[spot].active = False
 
-          del self.gui_board[spot]
+            self.used_spots[spot] = self.gui_board[spot]
 
-      self.opponent.update_rack(self.bag)
-      self.opponent.update_score()
+            del self.gui_board[spot]
 
-      self.set_word_info(word.words)
-      self.decorate_rack()
+        self.opponent.update_rack(self.bag)
+        self.opponent.update_score()
 
-      self.board.place(word.word, word.range)
+        self.set_word_info(word.words)
+        self.decorate_rack()
 
-    self.enable_board()
-    self.init_turn()
+        self.board.place(word.word, word.range)
+
+      self.enable_board()
+      self.init_turn()
 
   def place_tile(self, event):
     start_t_name = type(self.start_tile).__name__
@@ -696,6 +724,7 @@ class GamePage(Frame):
         end_t_letter.set(self.start_tile.letter.get())
 
         if end_tile in self.empty_rack_tiles:
+          print(2)
           self.empty_rack_tiles.append(self.start_tile)
           del self.empty_rack_tiles[self.empty_rack_tiles.index(end_tile)]
 
@@ -906,10 +935,7 @@ class GamePage(Frame):
       if self.lan_mode:
         self.placed_tiles = {spot:tile.letter.get() for spot, tile in self.placed_tiles.items()}
 
-      if self.comp_mode:
-        self.wait_comp()
-      else:
-        self.init_turn()
+      self.init_turn()
     else:
       if self.wild_tile:
         self.wild_tile.letter.set(' ')
@@ -1253,8 +1279,12 @@ class GamePage(Frame):
 
   # Necessary for preventing lag in lan games
   def destroy(self):
+    if self.server_not_found:
+      # Prevent infinite loop
+      self.server_not_found = False
+      self.restart_game()
     if self.lan_mode:
       self.game_online = False
       self.thread.join()
-      
+
     super().destroy()
