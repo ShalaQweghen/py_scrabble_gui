@@ -32,7 +32,7 @@ class GamePage(Frame):
       self.resolve_options(options) 
     else:
       self.joined_lan = True
-      self.thread = threading.Thread(target=lh.join_lan_game, args=(options,self.queue))
+      self.thread = threading.Thread(target=lh.join_lan_game, args=(options, self.queue))
       self.thread.start()
       self.resolve_options()
 
@@ -67,7 +67,7 @@ class GamePage(Frame):
     self.game_online = True
     self.may_proceed = True
     
-    self.turns = 0
+    self.turns = 0  # For games against computer
     self.seconds = 0
     self.own_mark = 0 # Necessary for lan game
     self.op_score = 0 # For games against computer
@@ -547,13 +547,14 @@ class GamePage(Frame):
     self.bag_info.set('{} Tiles in Bag'.format(len(self.bag.bag)))
     self.status_info.set('... Computer\'s Turn ...')
 
-    t = threading.Thread(target=self.get_comp_move, args=(self.queue,))
+    args = (self.queue, self.opponent, self.bag, self.board, self.dict)
+    t = threading.Thread(target=self.get_comp_move, args=args)
     t.start()
 
     self.process_comp_word()
 
-  def get_comp_move(self, queue):
-    word = self.opponent.get_move(self.bag, self.board, self.dict)
+  def get_comp_move(self, queue, opponent, bag, board, dic):
+    word = opponent.get_move(bag, board, dic)
     queue.put(word)
 
   def process_comp_word(self):
@@ -1168,6 +1169,7 @@ class GamePage(Frame):
       data['op_score'] = self.op_score
       data['seconds'] = self.seconds
       data['minutes'] = self.minutes
+      data['turns'] = self.turns
 
       file = open(filename, 'wb')
       pickle.dump(data, file)

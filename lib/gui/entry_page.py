@@ -78,6 +78,7 @@ class EntryPage(Frame):
       game.op_score = data['op_score']
       game.seconds = data['seconds']
       game.minutes = data['minutes']
+      game.turns = data['turns']
 
   def join_game(self):
     name = askstring('Enter Name', 'Enter your name:')
