@@ -56,28 +56,28 @@ def check_ip(ip, server):
 		server.append(s)
 
 def find_server():
-	own_ip = find_own_ip()
-	# ip address except for the last number
-	base = re.match('(\d+\.\d+\.\d+\.)', own_ip).groups()[0]
-	# Use threads to make it faster
-	threads = []
-	# serv is an array in order to modify it in another method
-	serv = []
+  own_ip = find_own_ip()
+  # ip address except for the last number
+  base = re.match('(\d+\.\d+\.\d+\.)', own_ip).groups()[0]
+  # Use threads to make it faster
+  threads = []
+  # serv is an array in order to modify it in another method
+  serv = []
 
-	# Check all the possible ips in range
-	for i in range(0, 256):
-		ip = base + str(i)
-		threads.append(threading.Thread(target=check_ip, args=(ip, serv)))
-		threads[i].start()
+  # Check all the possible ips in range
+  for i in range(0, 256):
+  	ip = base + str(i)
+  	threads.append(threading.Thread(target=check_ip, args=(ip, serv)))
+  	threads[i].start()
 
-	# Join threads to wait all to finish before returning
-	for i in range(0, 256):
-		threads[i].join()
+  # Join threads to wait all to finish before returning
+  for i in range(0, 256):
+  	threads[i].join()
 
-	if serv:
-		return serv[0]
-	else:
-		return None
+  if serv:
+  	return serv[0]
+  else:
+  	return None
 
 def create_lan_game(options, queue, bag):
   # Server goes first
@@ -151,7 +151,7 @@ def create_lan_game(options, queue, bag):
 
         for pl in lan_players:
           send_msg(pl, pickle.dumps(turn_pack))
-        
+
         cur_play_mark = set_lan_cpm(cur_play_mark, turn_pack, play_num)
 
   server.close()
@@ -189,11 +189,11 @@ def join_lan_game(options, queue):
         turn_pack = pickle.loads(recv_msg(server))
         game_online = turn_pack[-1]
 
-        # If a player is not challenged, the first element of turn_pack is 
+        # If a player is not challenged, the first element of turn_pack is
         # a player's mark. This prevents accidentally receiving own turn_pack
         if turn_pack[0] != own_mark:
           queue.put(turn_pack)
-          
+
           cur_play_mark = set_lan_cpm(cur_play_mark, turn_pack, play_num)
 
           while not queue.empty():
@@ -204,14 +204,14 @@ def join_lan_game(options, queue):
     queue.put(False)
 
 def set_lan_cpm(cur_play_mark, turn_pack, play_num):
-  # In challenge mode, if a player challenges a word, the second element 
+  # In challenge mode, if a player challenges a word, the second element
   # of the turn_pack is the flag for challenge succeeded or failed
   try:
     chal_check = pickle.loads(turn_pack)[1]
   except:
     chal_check = turn_pack[1]
 
-  # Increase cur_play_mark by 1 if the player isn't challenged or 
+  # Increase cur_play_mark by 1 if the player isn't challenged or
   # challenge didn't succeed.
   if type(chal_check) != type(True) or not chal_check:
     # cur_play_mark shouldn't be less than play_num

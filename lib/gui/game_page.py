@@ -29,7 +29,7 @@ class GamePage(Frame):
     # There isn't a play_num key in the options, it is a game joined on lan
     if options.get('play_num', False):
       self.joined_lan = False
-      self.resolve_options(options) 
+      self.resolve_options(options)
     else:
       self.joined_lan = True
       self.thread = threading.Thread(target=lh.join_lan_game, args=(options, self.queue))
@@ -66,7 +66,7 @@ class GamePage(Frame):
     self.first_turn = True
     self.game_online = True
     self.may_proceed = True
-    
+
     self.turns = 0  # For games against computer
     self.seconds = 0
     self.own_mark = 0 # Necessary for lan game
@@ -412,12 +412,12 @@ class GamePage(Frame):
         self.disable_board()
         if not self.chal_failed:
           self.queue.put((self.own_mark,
-                          self.word, 
-                          self.w_range, 
-                          self.placed_tiles, 
-                          self.prev_spots_buffer, 
-                          self.players, 
-                          self.bag, 
+                          self.word,
+                          self.w_range,
+                          self.placed_tiles,
+                          self.prev_spots_buffer,
+                          self.players,
+                          self.bag,
                           self.board,
                           self.game_online))
         elif self.letters_passed:
@@ -515,7 +515,7 @@ class GamePage(Frame):
 
         tile['bg'] = '#BE975B'
 
-  # Disable board and buttons when it is not a player's turn 
+  # Disable board and buttons when it is not a player's turn
   # so that they don't mess things up
   def disable_board(self):
     self.sub.config(state=DISABLED)
@@ -618,7 +618,6 @@ class GamePage(Frame):
         end_t_letter.set(self.start_tile.letter.get())
 
         if end_tile in self.empty_rack_tiles:
-          print(2)
           self.empty_rack_tiles.append(self.start_tile)
           del self.empty_rack_tiles[self.empty_rack_tiles.index(end_tile)]
 
@@ -948,36 +947,37 @@ class GamePage(Frame):
 
     passed_letters = list(re.sub('[^A-Z ]', '', entry.get().upper()))
 
-    # If a player wants to change a wild letter
-    if ' ' in passed_letters and '@' in self.cur_player.letters:
-      count1 = self.cur_player.letters.count('@')
-      count2 = passed_letters.count(' ')
+    if passed_letters:
+      # If a player wants to change a wild letter
+      if ' ' in passed_letters and '@' in self.cur_player.letters:
+        count1 = self.cur_player.letters.count('@')
+        count2 = passed_letters.count(' ')
 
-      for i in range(count2):
+        for i in range(count2):
+          passed_letters.remove(' ')
+          passed_letters.append('@')
+
+          if i == count1 - 1:
+            break
+
+      # Remove the remaining spaces
+      while ' ' in passed_letters:
         passed_letters.remove(' ')
-        passed_letters.append('@')
 
-        if i == count1 - 1:
-          break
+      self.cur_player.passed_letters = passed_letters
+      self.bag.put_back(passed_letters)
 
-    # Remove the remaining spaces
-    while ' ' in passed_letters:
-      passed_letters.remove(' ')
+      entry.master.master.destroy()
 
-    self.cur_player.passed_letters = passed_letters
-    self.bag.put_back(passed_letters)
+      self.cur_player.update_rack(self.bag)
+      self.decorate_rack()
 
-    entry.master.master.destroy()
+      self.pass_num += 1
 
-    self.cur_player.update_rack(self.bag)
-    self.decorate_rack()
-
-    self.pass_num += 1
-
-    if self.comp_mode:
-      self.wait_comp()
-    else:
-      self.init_turn()
+      if self.comp_mode:
+        self.wait_comp()
+      else:
+        self.init_turn()
 
   def challenge(self, pack=None):
     for word in self.prev_words:
@@ -992,7 +992,7 @@ class GamePage(Frame):
         for letter in self.players[self.cur_play_mark - 1].new_letters:
           self.players[self.cur_play_mark - 1].letters.remove(letter)
           self.bag.put_back([letter])
-        
+
         # Remove the letters of the challenged word and put them back on rack
         for spot in self.prev_spots_buffer:
           if spot in self.used_spots:
@@ -1029,7 +1029,7 @@ class GamePage(Frame):
         self.update_info()
 
         return True
-    
+
     # If challenge fails
     if self.lan_mode:
       self.chal_failed = True
