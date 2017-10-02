@@ -1,12 +1,11 @@
-import threading, re, os, pickle, socket, queue
+import threading, re, os, pickle, queue
 
 from tkinter import *
 from tkinter.messagebox import askyesno
 from tkinter.simpledialog import askstring
 from tkinter.filedialog import asksaveasfilename
 
-import lib.custom_socket as cs
-import lib.helpers as helpers
+import lib.lan_helpers as lh
 
 from lib.dic import Dict
 from lib.bag import Bag
@@ -33,7 +32,7 @@ class GamePage(Frame):
       self.resolve_options(options) 
     else:
       self.joined_lan = True
-      self.thread = threading.Thread(target=self.handle_lan_game, args=(options,self.queue))
+      self.thread = threading.Thread(target=lh.join_lan_game, args=(options,self.queue))
       self.thread.start()
       self.resolve_options()
 
@@ -310,17 +309,14 @@ class GamePage(Frame):
       self.setting_wild_tile = False
 
   def initialize_game(self):
-    # If the game is not on the lan, start countdown right away.
-    # If it is on the lan, wait for others to join
-    if self.time_limit and not self.lan_mode:
-      self.countdown()
-
     self.check_game_over()
 
     # No need to create new players if a saved game is loaded or joined a game on lan
     if self.lan_mode and not self.joined_lan:
-      self.thread = threading.Thread(target=self.create_server, args=(self.options, self.queue, self.bag))
+      self.thread = threading.Thread(target=lh.create_lan_game, args=(self.options, self.queue, self.bag))
       self.thread.start()
+
+      self.initialize_players()
     elif self.joined_lan:
       self.players, self.bag = self.queue.get()
       self.init_turn()
@@ -330,123 +326,6 @@ class GamePage(Frame):
       self.master.master.after(1000, self.load_board)
     else:
       self.initialize_players()
-
-  def create_server(self, options, queue, bag):
-    # Server goes first
-    own_mark = 0
-    cur_play_mark = 0
-
-    lan_players = []
-    play_num = options['play_num']
-
-    server = socket.socket()
-
-    server.bind(('', 11235))
-    server.listen()
-
-    # Let players join the game and add their names into options before
-    # serving them the options .The range starts from 1 because it doesn't
-    # include the player initializing the server.
-    for i in range(1, options['play_num']):
-      cli, addr = server.accept()
-      lan_players.append(cli)
-      name = pickle.loads(cs.recv_msg(cli))
-      options['names'].append(name)
-
-    opts = pickle.dumps(options)
-
-    # m is each joined player's mark to determine their turn
-    for m, pl in enumerate(lan_players):
-      cs.send_msg(pl, pickle.dumps((opts, m + 1)))
-
-    self.initialize_players()
-
-    players = queue.get()
-
-    for pl in lan_players:
-      cs.send_msg(pl, pickle.dumps((players, bag)))
-
-    if options['time_limit']:
-      self.countdown()
-
-    while self.game_online:
-      if cur_play_mark != own_mark:
-        # - 1 because lan_players array size is play_num - 1
-        player = lan_players[cur_play_mark - 1]
-
-        turn_pack = cs.recv_msg(player)
-
-        # Prevent the own turn_pack to be put in the queue
-        if turn_pack and turn_pack[0] != own_mark:
-          queue.put(pickle.loads(turn_pack))
-
-          for mark, pl in enumerate(lan_players):
-            # Prevent sending the received turn_pack to go back
-            if mark != cur_play_mark - 1:
-              cs.send_msg(pl,turn_pack)
-
-          # Wait till queue is empty so that the same turn_pack
-          # isn't evaluated twice
-          while not queue.empty():
-            continue
-
-          cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
-      else:
-        if not queue.empty():
-          turn_pack = queue.get()
-
-          for pl in lan_players:
-            cs.send_msg(pl, pickle.dumps(turn_pack))
-          
-          cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
-
-    server.close()
-
-  def handle_lan_game(self, options, queue):
-    cur_play_mark = 0
-
-    # Automatically detect server ip and connect to it
-    # Server is None if no server is found
-    server = cs.find_server()
-
-    if server:
-      cs.send_msg(server, pickle.dumps(options['names'][0]))
-
-      options, own_mark = pickle.loads(cs.recv_msg(server))
-      options = pickle.loads(options)
-      queue.put((options, own_mark))
-
-      play_num = options['play_num']
-
-      players, bag = pickle.loads(cs.recv_msg(server))
-      queue.put((players, bag))
-
-      if options['time_limit']:
-        self.countdown()
-
-      while self.game_online:
-        if own_mark == cur_play_mark:
-          if not queue.empty():
-            turn_pack = queue.get()
-            cs.send_msg(server, pickle.dumps(turn_pack))
-
-            cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
-        else:
-          turn_pack = pickle.loads(cs.recv_msg(server))
-
-          # If a player is not challenged, the first element of turn_pack is 
-          # a player's mark. This prevents accidentally receiving own turn_pack
-          if turn_pack[0] != own_mark:
-            queue.put(turn_pack)
-            
-            cur_play_mark = helpers.set_lan_cpm(cur_play_mark, turn_pack, play_num)
-
-            while not queue.empty():
-              continue
-
-      server.close()
-    else:
-      queue.put(False)
 
   def countdown(self):
     if self.seconds == 0:
@@ -469,27 +348,34 @@ class GamePage(Frame):
       self.end_game()
 
   def initialize_players(self):
-    for i in range(self.play_num):
-      pl = Player(self.players[i])
-      pl.draw_letters(self.bag)
-      self.players.append(pl)
+    if self.lan_mode and self.queue.empty():
+      self.master.master.after(1000, self.initialize_players)
+    else:
+      # Get rid of the flag in the queue
+      if self.lan_mode:
+        self.queue.get()
 
-      # If the game is against a computer, no need for the second
-      # iteration because its class is different
-      if self.comp_mode:
-        self.opponent = AIOpponent()
-        self.opponent.draw_letters(self.bag)
-        self.players.append(self.opponent)
+      for i in range(self.play_num):
+        pl = Player(self.players[i])
+        pl.draw_letters(self.bag)
+        self.players.append(pl)
 
-        break
+        # If the game is against a computer, no need for the second
+        # iteration because its class is different
+        if self.comp_mode:
+          self.opponent = AIOpponent()
+          self.opponent.draw_letters(self.bag)
+          self.players.append(self.opponent)
 
-    # Deletes the name strings
-    del self.players[:self.play_num]
+          break
 
-    if self.lan_mode:
-      self.queue.put(self.players)
+      # Deletes the name strings
+      del self.players[:self.play_num]
 
-    self.init_turn()
+      if self.lan_mode:
+        self.queue.put(self.players)
+
+      self.init_turn()
 
   # Set the words of the loaded game on the board
   def load_board(self):
@@ -515,6 +401,9 @@ class GamePage(Frame):
     self.init_turn()
 
   def init_turn(self):
+    if self.time_limit and self.first_turn:
+      self.countdown()
+
     if self.lan_mode and not self.first_turn:
       if self.own_mark == self.cur_play_mark:
         self.disable_board()
@@ -526,7 +415,8 @@ class GamePage(Frame):
                           self.prev_spots_buffer, 
                           self.players, 
                           self.bag, 
-                          self.board))
+                          self.board,
+                          self.game_online))
         elif self.letters_passed:
           self.queue.put((self.own_mark, self.bag))
         else:
@@ -670,9 +560,9 @@ class GamePage(Frame):
       word = self.queue.get()
 
       if self.opponent.is_passing:
-        self.passes += 1
+        self.pass_num += 1
       else:
-        self.passes = 0
+        self.pass_num = 0
 
         for spot, letter in zip(word.range, word.word):
           if self.gui_board.get(spot, False):
@@ -810,7 +700,8 @@ class GamePage(Frame):
         self.may_proceed = True
         self.is_challenged = False
         # pack[0] is a number significant for create_server and handle_lan_game
-        self.word, self.w_range, received_tiles, self.prev_spots_buffer, self.players, self.bag, self.board = pack[1:]
+        # pack[-1] is the game_online flag
+        self.word, self.w_range, received_tiles, self.prev_spots_buffer, self.players, self.bag, self.board = pack[1:-1]
         # It is a new word for the receiver
         self.word.new = True
 
