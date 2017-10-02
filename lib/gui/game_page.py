@@ -67,6 +67,7 @@ class GamePage(Frame):
     self.game_online = True
     self.may_proceed = True
     
+    self.turns = 0
     self.seconds = 0
     self.own_mark = 0 # Necessary for lan game
     self.op_score = 0 # For games against computer
@@ -401,6 +402,8 @@ class GamePage(Frame):
     self.init_turn()
 
   def init_turn(self):
+    self.turns += 1
+
     if self.time_limit and self.first_turn:
       self.countdown()
 
@@ -446,7 +449,7 @@ class GamePage(Frame):
     if self.lan_mode and self.own_mark != self.cur_play_mark:
       self.process_word()
 
-    if self.comp_mode:
+    if self.comp_mode and self.turns % 2 == 0:
       self.wait_comp()
 
   def update_info(self):
@@ -786,6 +789,7 @@ class GamePage(Frame):
       self.get_lan_move()
     elif self.placed_tiles:
       self.get_norm_move()
+
     if self.may_proceed and type(self.word) != type(None) and self.word.new and self.word.validate():
       self.cur_player.word = self.word
       self.pass_num = 0
