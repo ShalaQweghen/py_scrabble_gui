@@ -1,7 +1,7 @@
 import threading, re, os, pickle, queue
 
 from tkinter import *
-from tkinter.messagebox import askyesno
+from tkinter.messagebox import askyesno, showwarning
 from tkinter.simpledialog import askstring
 from tkinter.filedialog import asksaveasfilename
 
@@ -1171,6 +1171,7 @@ class GamePage(Frame):
   # Necessary for preventing lag in lan games
   def destroy(self):
     if self.server_not_found:
+      showwarning('Game Not Found', 'There are no hosted games.')
       # Prevent infinite loop
       self.server_not_found = False
       self.restart_game()
