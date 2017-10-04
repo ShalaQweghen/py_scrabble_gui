@@ -266,10 +266,6 @@ class GamePage(Frame):
     self.placed_tiles = {}
     self.may_proceed = False
 
-  # For passing letters and setting wild tile
-  def cancel_popup(self, popup):
-    popup.destroy()
-
   def initialize_game(self):
     self.check_game_over()
 
