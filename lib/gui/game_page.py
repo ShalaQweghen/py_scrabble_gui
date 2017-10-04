@@ -50,10 +50,9 @@ class GamePage(Frame):
     self.word = None
     self.thread = None
     self.winner = None
-    self.wild_tile = None
     self.cur_player = None
     self.start_tile = None
-    self.wild_tile_clone = None # Necessary for challenge mode
+    self.wild_tiles_clone = None # Necessary for challenge mode
 
     self.time_up = False
     self.game_over = False
@@ -61,7 +60,6 @@ class GamePage(Frame):
     self.is_challenged = False  # Necessary for lan game
     self.letters_passed = False # Necessary for lan game
     self.server_not_found = False # Necessary for lan game
-    self.setting_wild_tile = False
 
     self.first_turn = True
     self.game_online = True
@@ -81,6 +79,7 @@ class GamePage(Frame):
     self.rack = []
     self.losers = []
     self.raw_word = []
+    self.wild_tiles = []
     self.prev_words = []  # Necessary for challenge mode
     self.spots_buffer = []  # Necessary for challenge mode
     self.empty_rack_tiles = []
@@ -171,7 +170,7 @@ class GamePage(Frame):
     self.sub.pack(side=LEFT, padx=5)
 
     self.pas = Button(button_f, text='Pass')
-    self.pas.config(command=lambda: self.show_popup('Pass Letters', 'Enter letters to pass:', 'Pass', self.pass_letters))
+    self.pas.config(command=self.pass_letters)
     self.pas.pack(side=LEFT, padx=5)
 
     if self.chal_mode:
@@ -255,40 +254,6 @@ class GamePage(Frame):
 
     self.words_info.set(message[:-1])
 
-  # For passing letters and setting wild tile
-  def show_popup(self, title_text, label_text, button_text, command):
-    if button_text == 'Set':
-      self.setting_wild_tile = True
-
-    pop = Toplevel(self)
-    pop.title(title_text)
-
-    pop.protocol('WM_DELETE_WINDOW', lambda: self.cancel_popup(pop))
-
-    main_f = Frame(pop)
-    main_f.pack(side=TOP)
-
-    # Show popup inside the main window
-    self.master.master.update()
-    x = self.master.master.winfo_rootx() + 200
-    pop.geometry("+{}+{}".format(x, 300))
-
-    Label(main_f, text=label_text).pack(side=LEFT)
-
-    ent = Entry(main_f)
-    ent.pack(side=LEFT)
-    ent.focus()
-
-    button_f = Frame(pop)
-    button_f.pack(side=BOTTOM)
-
-    Button(button_f, text=button_text, command=lambda: command(ent)).pack(side=LEFT)
-    Button(button_f, text='Cancel', command=lambda: self.cancel_popup(pop)).pack()
-
-    pop.grab_set()
-    pop.focus_set()
-    pop.wait_window()
-
   # Undo tile placement and word formation
   def undo_placement(self):
     for t1, t2 in zip(self.empty_rack_tiles, self.placed_tiles.values()):
@@ -304,10 +269,6 @@ class GamePage(Frame):
   # For passing letters and setting wild tile
   def cancel_popup(self, popup):
     popup.destroy()
-
-    if self.setting_wild_tile:
-      self.undo_placement()
-      self.setting_wild_tile = False
 
   def initialize_game(self):
     self.check_game_over()
@@ -713,19 +674,19 @@ class GamePage(Frame):
           self.placed_tiles[spot] = self.gui_board[spot]
           self.placed_tiles[spot].letter.set(letter)
 
-  def get_norm_move(self):
-    self.w_range = sorted(self.placed_tiles)
-    self.raw_word = []
-
+  def determine_direction(self):
     # If there is only one letter in the list, find its direction
     if len(self.w_range) == 1:
       # Get the spots on the right and left side by changing letter value of the spot
       r = chr(ord(self.w_range[0][0]) + 1) + self.w_range[0][1:]
       l = chr(ord(self.w_range[0][0]) - 1) + self.w_range[0][1:]
 
-      # Check the spots on the left and right side
+      # Check the spots on the left and right side.
       # If they are occupied, the direction is r. If not, d.
-      if re.fullmatch('[A-Z@]', self.board.board[r]) or re.fullmatch('[A-Z@]', self.board.board[l]):
+      # Also check if they go over the board boundary.
+      if self.board.board.get(r, False) and re.fullmatch('[A-Z@]', self.board.board[r]):
+        self.direction = 'r'
+      elif self.board.board.get(l, False) and re.fullmatch('[A-Z@]', self.board.board[l]):
         self.direction = 'r'
       else:
         self.direction = 'd'
@@ -745,9 +706,7 @@ class GamePage(Frame):
       else:
         self.direction = 'r'
 
-    # Array for letters already on board and are included in the word made
-    self.aob_list = []
-
+  def set_raw_word(self):
     for spot in self.w_range:
       self.raw_word.append(self.placed_tiles[spot].letter.get())
       self.set_aob_list(spot)
@@ -771,7 +730,19 @@ class GamePage(Frame):
     self.raw_word = ''.join(self.raw_word)
 
     if ' ' in self.raw_word:
-      self.show_popup('Set Wild Tile', 'Enter a letter:', 'Set', self.change_wild_tile)
+      self.change_wild_tile()
+
+  def get_norm_move(self):
+    self.raw_word = []
+    self.may_proceed = True
+
+    # Array for letters already on board and are included in the word made
+    self.aob_list = []
+
+    self.w_range = sorted(self.placed_tiles)
+
+    self.determine_direction()
+    self.set_raw_word()
 
     # Just the letters are necessary for word object
     aob_list = [x[2] for x in self.aob_list]
@@ -781,8 +752,6 @@ class GamePage(Frame):
     # Check if all the spots are on the same row or column
     if not self.valid_sorted_letters():
       self.may_proceed = False
-    else:
-      self.may_proceed = True
 
   def process_word(self):
     if self.lan_mode and self.own_mark != self.cur_play_mark:
@@ -793,7 +762,7 @@ class GamePage(Frame):
     if self.may_proceed and type(self.word) != type(None) and self.word.new and self.word.validate():
       self.cur_player.word = self.word
       self.pass_num = 0
-      self.wild_tile = None
+      self.wild_tiles = []
       self.prev_words = []
 
       # Deactivate and disclude used spots
@@ -832,9 +801,11 @@ class GamePage(Frame):
 
       self.init_turn()
     else:
-      if self.wild_tile:
-        self.wild_tile.letter.set(' ')
-        self.wild_tile = None
+      if self.wild_tiles:
+        for tile in self.wild_tiles:
+          tile.letter.set(' ')
+
+        self.wild_tiles = []
 
   def set_aob_list(self, spot):
     # Checks are to see if the spot is already on the list
@@ -912,72 +883,80 @@ class GamePage(Frame):
 
     return True
 
-  def change_wild_tile(self, entry):
-    if re.fullmatch('[A-Z@]', entry.get().upper()):
-      self.raw_word = re.sub(' ', entry.get().upper(), self.raw_word)
+  def change_wild_tile(self):
+    letter = askstring('Set Wild Tile', 'Enter letter(s):')
 
-      for spot in self.placed_tiles:
-        if self.placed_tiles[spot].letter.get() == ' ':
-          self.wild_tile = self.placed_tiles[spot]
+    if letter:
+      letter = re.sub('[^A-Z]', '', letter.upper())
 
-          if self.chal_mode:
-            self.wild_tile_clone = self.wild_tile
+      if re.fullmatch('[A-Z]+', letter):
+        self.raw_word = re.sub(' ', letter[0], self.raw_word, 1)
 
-          self.board.wild_letters_on_board.append(self.wild_tile.name)
+        if ' ' in self.raw_word:
+          self.raw_word = re.sub(' ', letter[1], self.raw_word, 1)
 
-          self.placed_tiles[spot].letter.set(entry.get().upper())
+        for spot in self.w_range:
+          if self.placed_tiles[spot].letter.get() == ' ':
+            self.wild_tiles.append(self.placed_tiles[spot])
 
-          self.cur_player.wild_letters.append(entry.get().upper())
+            if self.chal_mode:
+              self.wild_tiles_clone = self.wild_tiles.copy()
 
-      entry.master.master.destroy()
+            self.board.wild_letters_on_board.append(self.placed_tiles[spot].name)
 
-  def pass_letters(self, entry):
-    self.letters_passed = True
+        for i, tile in enumerate(self.wild_tiles):
+          tile.letter.set(letter[i])
+          self.cur_player.wild_letters.append(letter[i])
+    else:
+      self.undo_placement()
 
-    # Reset the gui board if any tiles are places before passing letters
-    # and put the tiles back on the rack
-    for tile in self.gui_board.values():
-      if tile.letter.get() != '':
-        self.empty_rack_tiles[0].letter.set(tile.letter.get())
-        self.empty_rack_tiles[0]['bg'] = '#BE975B'
-        del self.empty_rack_tiles[0]
+  def pass_letters(self):
+    letters = askstring('Pass Letters', 'Enter letters to pass:')
 
-        tile.letter.set('')
-        self.determine_tile_background(tile)
+    if letters:
+      self.letters_passed = True
+      # Reset the gui board if any tiles are places before passing letters
+      # and put the tiles back on the rack
+      for tile in self.gui_board.values():
+        if tile.letter.get() != '':
+          self.empty_rack_tiles[0].letter.set(tile.letter.get())
+          self.empty_rack_tiles[0]['bg'] = '#BE975B'
+          del self.empty_rack_tiles[0]
 
-    passed_letters = list(re.sub('[^A-Z ]', '', entry.get().upper()))
+          tile.letter.set('')
+          self.determine_tile_background(tile)
 
-    if passed_letters:
-      # If a player wants to change a wild letter
-      if ' ' in passed_letters and '@' in self.cur_player.letters:
-        count1 = self.cur_player.letters.count('@')
-        count2 = passed_letters.count(' ')
+      passed_letters = list(re.sub('[^A-Z ]', '', letters.upper()))
 
-        for i in range(count2):
+      if passed_letters:
+        # If a player wants to change a wild letter
+        if ' ' in passed_letters and '@' in self.cur_player.letters:
+          count1 = self.cur_player.letters.count('@')
+          count2 = passed_letters.count(' ')
+
+          for i in range(count2):
+            passed_letters.remove(' ')
+            passed_letters.append('@')
+
+            if i == count1 - 1:
+              break
+
+        # Remove the remaining spaces
+        while ' ' in passed_letters:
           passed_letters.remove(' ')
-          passed_letters.append('@')
 
-          if i == count1 - 1:
-            break
+        self.cur_player.passed_letters = passed_letters
+        self.bag.put_back(passed_letters)
 
-      # Remove the remaining spaces
-      while ' ' in passed_letters:
-        passed_letters.remove(' ')
+        self.cur_player.update_rack(self.bag)
+        self.decorate_rack()
 
-      self.cur_player.passed_letters = passed_letters
-      self.bag.put_back(passed_letters)
+        self.pass_num += 1
 
-      entry.master.master.destroy()
-
-      self.cur_player.update_rack(self.bag)
-      self.decorate_rack()
-
-      self.pass_num += 1
-
-      if self.comp_mode:
-        self.wait_comp()
-      else:
-        self.init_turn()
+        if self.comp_mode:
+          self.wait_comp()
+        else:
+          self.init_turn()
 
   def challenge(self, pack=None):
     for word in self.prev_words:
@@ -996,11 +975,14 @@ class GamePage(Frame):
         # Remove the letters of the challenged word and put them back on rack
         for spot in self.prev_spots_buffer:
           if spot in self.used_spots:
-            if self.wild_tile_clone and spot == self.wild_tile_clone.name:
-              self.board.wild_letters_on_board.remove(spot)
-              self.used_spots[spot].letter.set('')
-              self.players[self.cur_play_mark - 1].letters.append('@')
-            else:
+            for tile in self.wild_tiles_clone:
+              if spot == tile.name:
+                self.board.wild_letters_on_board.remove(spot)
+                self.used_spots[spot].letter.set('')
+                self.players[self.cur_play_mark - 1].letters.append('@')
+
+            # If the letter value is set to a letter
+            if self.used_spots[spot].letter.get():
               self.players[self.cur_play_mark - 1].letters.append(self.used_spots[spot].letter.get())
               self.used_spots[spot].letter.set('')
 
@@ -1093,7 +1075,7 @@ class GamePage(Frame):
     # Show popup inside the main window
     self.master.master.update()
     x = self.master.master.winfo_rootx() + 200
-    pop.geometry("+{}+{}".format(x, 300))
+    pop.geometry('+{}+{}'.format(x, 300))
 
     pop.protocol('WM_DELETE_WINDOW', lambda: self.quit_game(pop))
 

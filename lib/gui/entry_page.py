@@ -83,8 +83,8 @@ class EntryPage(Frame):
   def join_game(self):
     name = askstring('Enter Name', 'Enter your name:')
 
-    self.parent.master.set_geometry()
-    
-    self.parent.master.child = GamePage(self.parent, {'names': [name]})
+    if name:
+      self.parent.master.set_geometry()
+      self.parent.master.child = GamePage(self.parent, {'names': [name]})
 
 
