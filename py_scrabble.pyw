@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-import os
+import os, sys
 
 from tkinter import *
 from tkinter.messagebox import askyesno
@@ -18,6 +18,7 @@ class Root(Tk):
 
     self.child = None # Necessary for preventing lag in lan games
 
+    # Center the game window
     ws = self.winfo_screenwidth()
     x = int((ws/2) - (704/2))
 
@@ -60,12 +61,16 @@ class Root(Tk):
     if askyesno('Quit Game', 'Are you sure to quit the game?'):
       if self.child:
         self.child.destroy()
-        
+
       self.quit()
 
   def set_geometry(self):
-    self.geometry("700x650")
-    self.minsize(700, 650)
+    if sys.platform == 'darwin':
+      self.geometry("750x790")
+      self.minsize(750, 790)
+    else:
+      self.geometry("700x650")
+      self.minsize(700, 650)
 
 
 Root().mainloop()

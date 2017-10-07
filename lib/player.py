@@ -36,7 +36,7 @@ class Player:
 			for letter in self.word.word:
 				self._remove_tile(letter)
 
-			if len(self.letters) == 0:
+			if len(self.letters) == 0 and len(bag.bag) != 0:
 				self.full_bonus = True
 
 		if len(bag.bag) > 0:
@@ -48,7 +48,7 @@ class Player:
 		self.passed_letters = []
 
 	def update_score(self, points=0):
-		# If a points argument provided, it means 
+		# If a points argument provided, it means
 		# that it should be substracted
 		if points:
 			self.score -= points

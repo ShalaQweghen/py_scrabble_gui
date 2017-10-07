@@ -34,26 +34,29 @@ def find_own_ip():
   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
   try:
-      s.connect(('10.255.255.255', 1))
-      ip = s.getsockname()[0]
+    s.connect(('10.255.255.255', 1))
+    ip = s.getsockname()[0]
   except:
-      ip = '127.0.0.1'
+    ip = '127.0.0.1'
   finally:
-      s.close()
+    s.close()
 
   return ip
 
 def check_ip(ip, server):
-	s = socket.socket()
+  s = socket.socket()
 
-	try:
-		val = s.connect_ex((ip, 11235))
-	except socket.error:
-		s.close()
+  try:
+    val = s.connect_ex((ip, 11235))
+  except socket.error:
+    s.close()
 
-	# connect_ex returns 0 if socket connects
-	if val == 0:
-		server.append(s)
+  if val:
+    s.close()
+
+  # connect_ex returns 0 if socket connects
+  if val == 0:
+    server.append(s)
 
 def find_server():
   own_ip = find_own_ip()
@@ -66,9 +69,9 @@ def find_server():
 
   # Check all the possible ips in range
   for i in range(0, 256):
-  	ip = base + str(i)
-  	threads.append(threading.Thread(target=check_ip, args=(ip, serv)))
-  	threads[i].start()
+    ip = base + str(i)
+    threads.append(threading.Thread(target=check_ip, args=(ip, serv)))
+    threads[i].start()
 
   # Join threads to wait all to finish before returning
   for i in range(0, 256):
@@ -102,11 +105,9 @@ def create_lan_game(options, queue, bag):
     name = pickle.loads(recv_msg(cli))
     options['names'].append(name)
 
-  opts = pickle.dumps(options)
-
   # m is each joined player's mark to determine their turn
   for m, pl in enumerate(lan_players):
-    send_msg(pl, pickle.dumps((opts, m + 1)))
+    send_msg(pl, pickle.dumps((options, m + 1)))
 
   # Flag for initializing players
   queue.put(True)
@@ -168,7 +169,6 @@ def join_lan_game(options, queue):
     send_msg(server, pickle.dumps(options['names'][0]))
 
     options, own_mark = pickle.loads(recv_msg(server))
-    options = pickle.loads(options)
     queue.put((options, own_mark))
 
     play_num = options['play_num']

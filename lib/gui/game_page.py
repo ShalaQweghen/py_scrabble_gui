@@ -52,7 +52,6 @@ class GamePage(Frame):
     self.winner = None
     self.cur_player = None
     self.start_tile = None
-    self.wild_tiles_clone = None # Necessary for challenge mode
 
     self.time_up = False
     self.game_over = False
@@ -83,6 +82,7 @@ class GamePage(Frame):
     self.prev_words = []  # Necessary for challenge mode
     self.spots_buffer = []  # Necessary for challenge mode
     self.empty_rack_tiles = []
+    self.wild_tiles_clone = [] # Necessary for challenge mode
     self.prev_spots_buffer = [] # Necessary for challenge mode
 
     self.queue = queue.Queue()
@@ -208,11 +208,11 @@ class GamePage(Frame):
     cont_f = Frame(info_frame, bg='azure')
     cont_f.pack(side=TOP, pady=40, fill=X)
 
-    options = {'font': ('times', 15, 'italic'), 'bg': 'azure', 'fg': '#004d00'}
+    options = {'font': ('times', 16, 'italic'), 'bg': 'azure', 'fg': '#004d00'}
 
     if self.time_limit:
       l = Label(cont_f, textvariable=self.time_info)
-      l.config(font=('times', 15, 'italic'), bg='#004d00', fg='azure')
+      l.config(font=('times', 16, 'italic'), bg='#004d00', fg='azure')
       l.pack(anchor=NW)
 
     Label(cont_f, textvariable=self.bag_info, **options).pack(pady=10)
@@ -239,7 +239,7 @@ class GamePage(Frame):
 
     # For displaying the words made and their point values
     m = Message(cont_f, textvariable=self.words_info)
-    m.config(font=('times', 14, 'italic'), anchor=NW, bg='azure', fg='#004d00')
+    m.config(font=('times', 15, 'italic'), anchor=NW, bg='azure', fg='#004d00')
     m.pack(anchor=NW, fill=X)
 
   def set_word_info(self, words):
@@ -311,8 +311,9 @@ class GamePage(Frame):
     else:
       # Get rid of the flag in the queue
       if self.lan_mode:
-        self.queue.get()
+        discard = self.queue.get()
 
+      # Play num in joined mode is 0
       for i in range(self.play_num):
         pl = Player(self.players[i])
         pl.draw_letters(self.bag)
@@ -880,11 +881,11 @@ class GamePage(Frame):
     return True
 
   def change_wild_tile(self):
-    letter = askstring('Set Wild Tile', 'Enter letter(s):')
+    # askstring returns None if the action is cancelled
+    letter = askstring('Set Wild Tile', 'Enter letter(s):') or '0'
+    letter = re.sub('[^A-Z]', '', letter.upper())
 
     if letter:
-      letter = re.sub('[^A-Z]', '', letter.upper())
-
       if re.fullmatch('[A-Z]+', letter):
         self.raw_word = re.sub(' ', letter[0], self.raw_word, 1)
 
@@ -892,13 +893,16 @@ class GamePage(Frame):
           self.raw_word = re.sub(' ', letter[1], self.raw_word, 1)
 
         for spot in self.w_range:
-          if self.placed_tiles[spot].letter.get() == ' ':
-            self.wild_tiles.append(self.placed_tiles[spot])
+          try:
+            if self.placed_tiles[spot].letter.get() == ' ':
+              self.wild_tiles.append(self.placed_tiles[spot])
 
-            if self.chal_mode:
-              self.wild_tiles_clone = self.wild_tiles.copy()
+              if self.chal_mode:
+                self.wild_tiles_clone = self.wild_tiles.copy()
 
-            self.board.wild_letters_on_board.append(self.placed_tiles[spot].name)
+              self.board.wild_letters_on_board.append(self.placed_tiles[spot].name)
+          except KeyError:
+            continue
 
         for i, tile in enumerate(self.wild_tiles):
           tile.letter.set(letter[i])
@@ -1062,6 +1066,8 @@ class GamePage(Frame):
 
         self.show_end_game_popup(rea, mes)
       else:
+        self.game_over = False
+
         self.check_game_over()
 
   def show_end_game_popup(self, reason, message):
@@ -1107,10 +1113,17 @@ class GamePage(Frame):
 
         self.losers.append((player, subt))
 
-    points = max([player.score for player in self.players])
-    winner = self.players[[player.score for player in self.players].index(points)].name
+    scores = [player.score for player in self.players]
+    points = max(scores)
+    winner = self.players[scores.index(points)].name
 
     self.winner = (winner, points)
+
+    # Empty if there is time limit or word limit
+    if self.losers:
+      # Remove the winner from losers
+      del self.losers[scores.index(points)]
+
 
   def quit_game(self, win):
     win.destroy()
