@@ -1,3 +1,7 @@
+# Copyright (C) 2017  Serafettin Yilmaz
+#
+# See 'py_scrabble.pyw' for more info on copyright
+
 import random
 
 from tkinter import *
@@ -102,7 +106,7 @@ class LANStartPage(StartPage):
     self.options['point_limit'] = self.point_var.get()
 
     self.parent.master.set_geometry()
-    
+
     self.parent.master.child = GamePage(self.parent, self.options)
 
     self.destroy()

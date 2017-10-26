@@ -1,3 +1,7 @@
+# Copyright (C) 2017  Serafettin Yilmaz
+#
+# See 'py_scrabble.pyw' for more info on copyright
+
 import pickle
 
 from tkinter import *

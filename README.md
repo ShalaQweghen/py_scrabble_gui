@@ -1,12 +1,14 @@
-# PyScrabble With GUI
+# PyScrabbleGUI
 
-Complete with optional challenge mode, time limit, point limit, multiplayer on a single computer and multiplayer over LAN. You can choose different options from the game interface.
+A complete scrabble game written in Python3 with optional challenge mode, time limit, point limit, multiplayer on a single computer and multiplayer over LAN. You can choose different options from the game interface.
 
 You can also play against computer.
 
 If you don't know how to play Scrabble, click [here](https://scrabble.hasbro.com/en-us/rules) for rules
 
 Clone the game and enjoy it. If you have any feedbacks, I will very much appreciate.
+
+## How to Play
 
 ### Start a game
 
@@ -35,9 +37,13 @@ Computer goes through permutations of letters on its rack and picks the valid mo
 ### Save a game
 If a game is saved during a LAN multiplayer game, it can be later loaded as a normal multiplayer game on a single machine.
 
-### Screenshots
+## Screenshots
 
 ![](pics/pic_1.png)
 ![](pics/pic_2.png)
 ![](pics/pic_3.png)
 ![](pics/pic_4.png)
+
+## License
+
+This software is licensed under the [GNU General Public License 3.0](https://www.gnu.org/licenses/gpl-3.0.txt).

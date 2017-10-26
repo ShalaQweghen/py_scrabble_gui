@@ -1,3 +1,7 @@
+# Copyright (C) 2017  Serafettin Yilmaz
+#
+# See 'py_scrabble.pyw' for more info on copyright
+
 import re
 
 class Board:
@@ -76,7 +80,7 @@ class Board:
 		flag1 = self.occupied(square, direction, self.down_or_right)
 		flag2 = self.occupied(square, direction, self.up_or_left)
 
-		return flag1 or flag2 
+		return flag1 or flag2
 
 	def square_not_occupied(self, square, direction):
 		flag1 = not self.occupied(square, direction, self.up_or_left)

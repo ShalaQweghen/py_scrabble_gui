@@ -1,3 +1,7 @@
+# Copyright (C) 2017  Serafettin Yilmaz
+#
+# See 'py_scrabble.pyw' for more info on copyright
+
 import struct, socket, re, threading, pickle
 
 # send_msg, recv_msg, recvall are taken from https://stackoverflow.com/a/17668009
