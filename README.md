@@ -1,8 +1,15 @@
 # PyScrabbleGUI
 
-A complete scrabble game written in Python3 with optional challenge mode, time limit, point limit, multiplayer on a single computer and multiplayer over LAN. You can choose different options from the game interface.
+A complete scrabble game written in Python3 with the following features:
 
-You can also play against computer.
+* challenge mode
+* time limit
+* point limit
+* multiplayer on a single computer
+* multiplayer over LAN
+* playing against computer
+
+You can choose different options from the game interface.
 
 If you don't know how to play Scrabble, click [here](https://scrabble.hasbro.com/en-us/rules) for rules
 
@@ -35,7 +42,14 @@ A game of 2, 3 or 4 players can be played on a single computer. The letters on t
 Computer goes through permutations of letters on its rack and picks the valid move with the most points. A turn for computer takes about 1 minute 30 seconds (on i5 1.6 GHz with 8 GB RAM) depending on the computer.
 
 ### Save a game
+
 If a game is saved during a LAN multiplayer game, it can be later loaded as a normal multiplayer game on a single machine.
+
+### Multiplayer on LAN
+
+It is better to start a LAN game on a trusted network like a home or work network because security settings might prevent remote access.
+
+If a players on an OS X machine wants to join a game on LAN, it is recommended to increase the size of open files. The limit is 256 on new versions and it will cause `OSError: [Errno 24] Too many open files` because _Join a LAN Game_ uses threads to scan all the available IP's on LAN. In order to increase the limit, use `ulimit -n <new_limit>`. Anything above 300 should suffice.
 
 ## Screenshots
 
