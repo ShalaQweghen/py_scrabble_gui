@@ -674,6 +674,7 @@ class GamePage(Frame):
         for spot, letter in received_tiles.items():
           self.placed_tiles[spot] = self.gui_board[spot]
           self.placed_tiles[spot].letter.set(letter)
+          self.placed_tiles[spot].active = False
 
   def determine_direction(self):
     # If there is only one letter in the list, find its direction
@@ -1177,7 +1178,8 @@ class GamePage(Frame):
       self.server_not_found = False
       self.restart_game()
     if self.lan_mode:
-      self.game_online = False
+      # End the socket
+      self.queue.put([False])
       self.thread.join()
 
     super().destroy()
