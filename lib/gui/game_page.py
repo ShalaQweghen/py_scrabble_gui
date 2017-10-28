@@ -630,11 +630,6 @@ class GamePage(Frame):
           self.placed_tiles[self.start_tile.name] = self.start_tile
           self.placed_tiles[end_tile.name] = end_tile
           self.start_tile = None
-      else:
-        temp = end_t_letter.get()
-        end_t_letter.set(self.start_tile.letter.get())
-        self.start_tile.letter.set(temp)
-        self.start_tile = None
     else:
       self.start_tile = end_tile
 

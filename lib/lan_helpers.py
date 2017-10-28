@@ -127,10 +127,23 @@ def create_lan_game(options, queue, bag):
 
   while game_online:
     if cur_play_mark != own_mark:
+      # To be able to allow quitting when it is not the player's
+      # turn, the connection should be non-blocking
+      server.setblocking(False)
+
       # - 1 because lan_players array size is play_num - 1
       player = lan_players[cur_play_mark - 1]
 
-      turn_pack = recv_msg(player)
+      # When the connection is non-blocking, recv raises
+      # an exception. Catch the exception and restart the
+      # loop unless quitting signal is sent.
+      try:
+        turn_pack = recv_msg(player)
+      except BlockingIOError:
+        if not queue.empty():
+          game_online = queue.get()[0]
+
+        continue
 
       # Prevent the own turn_pack to be put in the queue
       if turn_pack and turn_pack[0] != own_mark:
@@ -150,6 +163,8 @@ def create_lan_game(options, queue, bag):
 
         cur_play_mark = set_lan_cpm(cur_play_mark, turn_pack, play_num)
     else:
+      server.setblocking(True)
+
       if not queue.empty():
         turn_pack = queue.get()
         game_online = turn_pack[-1]
@@ -182,6 +197,8 @@ def join_lan_game(options, queue):
 
     while game_online:
       if own_mark == cur_play_mark:
+        server.setblocking(True)
+
         if not queue.empty():
           turn_pack = queue.get()
           game_online = turn_pack[-1]
@@ -190,7 +207,21 @@ def join_lan_game(options, queue):
 
           cur_play_mark = set_lan_cpm(cur_play_mark, turn_pack, play_num)
       else:
-        turn_pack = pickle.loads(recv_msg(server))
+        # To be able to allow quitting when it is not the player's
+        # turn, the connection should be non-blocking
+        server.setblocking(False)
+
+        # When the connection is non-blocking, recv raises
+        # an exception. Catch the exception and restart the
+        # loop unless quitting signal is sent.
+        try:
+          turn_pack = pickle.loads(recv_msg(server))
+        except BlockingIOError:
+          if not queue.empty():
+            game_online = queue.get()[0]
+
+          continue
+
         game_online = turn_pack[-1]
 
         # If a player is not challenged, the first element of turn_pack is
