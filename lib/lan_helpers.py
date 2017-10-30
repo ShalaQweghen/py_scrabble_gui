@@ -5,34 +5,43 @@
 import struct, socket, re, threading, pickle
 
 # send_msg, recv_msg, recvall are taken from https://stackoverflow.com/a/17668009
+# and modified as needed for the game
 # find_own_ip is taken from https://stackoverflow.com/a/28950776
 
 def send_msg(sock, msg):
+  # The length of the message is added to the beginning
+  # so that all the message can be captured correctly
 	msg = struct.pack('>I', len(msg)) + msg
 	sock.sendall(msg)
 
-def recv_msg(sock):
-	raw_msglen = recvall(sock, 4)
-
-	if not raw_msglen:
-		return None
+def recv_msg(sock, block=True):
+  # First 4 bytes are the length of the message
+  # so that the message can be captured correctly
+	raw_msglen = recvall(sock, 4, block)
 
 	msglen = struct.unpack('>I', raw_msglen)[0]
 
-	return recvall(sock, msglen)
+	return recvall(sock, msglen, block)
 
-def recvall(sock, n):
-	data = b''
+def recvall(sock, n, block):
+  # To be able to allow quitting when it is not the player's
+  # turn, the connection should be non-blocking
+  sock.setblocking(block)
 
-	while len(data) < n:
-		packet = sock.recv(n - len(data))
+  data = b''
 
-		if not packet:
-			return None
+  while len(data) < n:
+    # Raises BlockingIOError if there is no data available
+    # if the blocking is set to False
+    packet = sock.recv(n - len(data))
 
-		data += packet
+    # If there is data, turn the connection into blocking
+    # in order to avoid EOFError from pickle
+    sock.setblocking(True)
 
-	return data
+    data += packet
+
+  return data
 
 def find_own_ip():
   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -106,19 +115,13 @@ def create_lan_game(options, queue, bag):
   for i in range(1, options['play_num']):
     cli, addr = server.accept()
     lan_players.append(cli)
+
     name = pickle.loads(recv_msg(cli))
     options['names'].append(name)
 
   # m is each joined player's mark to determine their turn
   for m, pl in enumerate(lan_players):
     send_msg(pl, pickle.dumps((options, m + 1)))
-
-  # Flag for initializing players
-  queue.put(True)
-
-  # Wait till queue is empty so that the same flag won't be returned.
-  while not queue.empty():
-    continue
 
   players = queue.get()
 
@@ -127,10 +130,6 @@ def create_lan_game(options, queue, bag):
 
   while game_online:
     if cur_play_mark != own_mark:
-      # To be able to allow quitting when it is not the player's
-      # turn, the connection should be non-blocking
-      server.setblocking(False)
-
       # - 1 because lan_players array size is play_num - 1
       player = lan_players[cur_play_mark - 1]
 
@@ -138,23 +137,30 @@ def create_lan_game(options, queue, bag):
       # an exception. Catch the exception and restart the
       # loop unless quitting signal is sent.
       try:
-        turn_pack = recv_msg(player)
+        # False is for setting the connection non-blocking
+        turn_pack = recv_msg(player, False)
       except BlockingIOError:
+        # At this point, only thing that can be in the queue is
+        # the flag for ending the game because the player closed
+        # the window.
         if not queue.empty():
           game_online = queue.get()[0]
 
+        # If the player didn't close the window, keep waiting for data
         continue
+
+      turn_pack = pickle.loads(turn_pack)
 
       # Prevent the own turn_pack to be put in the queue
       if turn_pack and turn_pack[0] != own_mark:
-        queue.put(pickle.loads(turn_pack))
+        queue.put(turn_pack)
 
-        game_online = pickle.loads(turn_pack)[-1]
+        game_online = turn_pack[-1]
 
         for mark, pl in enumerate(lan_players):
           # Prevent sending the received turn_pack to go back
           if mark != cur_play_mark - 1:
-            send_msg(pl,turn_pack)
+            send_msg(pl,pickle.dumps(turn_pack))
 
         # Wait till queue is empty so that the same turn_pack
         # isn't evaluated twice
@@ -163,8 +169,6 @@ def create_lan_game(options, queue, bag):
 
         cur_play_mark = set_lan_cpm(cur_play_mark, turn_pack, play_num)
     else:
-      server.setblocking(True)
-
       if not queue.empty():
         turn_pack = queue.get()
         game_online = turn_pack[-1]
@@ -195,10 +199,11 @@ def join_lan_game(options, queue):
     players, bag = pickle.loads(recv_msg(server))
     queue.put((players, bag))
 
+    while not queue.empty():
+      continue
+
     while game_online:
       if own_mark == cur_play_mark:
-        server.setblocking(True)
-
         if not queue.empty():
           turn_pack = queue.get()
           game_online = turn_pack[-1]
@@ -207,21 +212,23 @@ def join_lan_game(options, queue):
 
           cur_play_mark = set_lan_cpm(cur_play_mark, turn_pack, play_num)
       else:
-        # To be able to allow quitting when it is not the player's
-        # turn, the connection should be non-blocking
-        server.setblocking(False)
-
         # When the connection is non-blocking, recv raises
         # an exception. Catch the exception and restart the
         # loop unless quitting signal is sent.
         try:
-          turn_pack = pickle.loads(recv_msg(server))
+          # False is for setting the connection non-blocking
+          turn_pack = recv_msg(server, False)
         except BlockingIOError:
+          # At this point, only thing that can be in the queue is
+          # the flag for ending the game because the player closed
+          # the window.
           if not queue.empty():
             game_online = queue.get()[0]
 
+          # If the player didn't close the window, keep waiting for data
           continue
 
+        turn_pack = pickle.loads(turn_pack)
         game_online = turn_pack[-1]
 
         # If a player is not challenged, the first element of turn_pack is
@@ -236,9 +243,11 @@ def join_lan_game(options, queue):
 
     server.close()
   else:
+    # Signal that no server was found
     queue.put(False)
 
 def set_lan_cpm(cur_play_mark, turn_pack, play_num):
+  # Length of turn_pack can be one if a player closes the window mid game.
   if len(turn_pack) > 1:
     # In challenge mode, if a player challenges a word, the second element
     # of the turn_pack is the flag for challenge succeeded or failed

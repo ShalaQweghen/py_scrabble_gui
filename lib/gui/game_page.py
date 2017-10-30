@@ -310,13 +310,9 @@ class GamePage(Frame):
       self.end_game()
 
   def initialize_players(self):
-    if self.lan_mode and self.queue.empty():
+    if self.lan_mode and len(self.players) < self.play_num:
       self.master.master.after(1000, self.initialize_players)
     else:
-      # Get rid of the flag in the queue
-      if self.lan_mode:
-        discard = self.queue.get()
-
       # Play num in joined mode is 0
       for i in range(self.play_num):
         pl = Player(self.players[i])
@@ -382,6 +378,11 @@ class GamePage(Frame):
                           self.bag,
                           self.board,
                           self.game_online))
+
+          # Wait till the queue is emptied by the other thread
+          # So that the same item is not captured by this thread
+          while not self.queue.empty():
+            continue
         elif self.letters_passed:
           self.queue.put((self.own_mark, self.bag))
         else:
