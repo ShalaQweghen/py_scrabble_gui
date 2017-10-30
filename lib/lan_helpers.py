@@ -115,7 +115,6 @@ def create_lan_game(options, queue, bag):
   for i in range(1, options['play_num']):
     cli, addr = server.accept()
     lan_players.append(cli)
-
     name = pickle.loads(recv_msg(cli))
     options['names'].append(name)
 

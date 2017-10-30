@@ -5,7 +5,7 @@
 import threading, re, os, pickle, queue
 
 from tkinter import *
-from tkinter.messagebox import askyesno, showwarning
+from tkinter.messagebox import askyesno, showwarning, showinfo
 from tkinter.simpledialog import askstring
 from tkinter.filedialog import asksaveasfilename
 
@@ -98,6 +98,8 @@ class GamePage(Frame):
 
   def resolve_options(self, options={}):
     if self.joined_lan:
+      showinfo('Searching...', 'Please wait...\nSearching for a hosted game...')
+
       # If a server is not found, a single value False comes
       # from the queue causing an exception.
       try:
