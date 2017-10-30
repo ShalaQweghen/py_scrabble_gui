@@ -128,6 +128,9 @@ class GamePage(Frame):
     l.config(bg='azure', fg='#FF4500', font=('times', 25, 'italic'))
     l.pack(side=TOP, pady=15)
 
+    if self.lan_mode and not self.joined_lan:
+      self.status_info.set('... Waiting for player(s) ...')
+
     board_f = Frame(out_f)
     board_f.pack(side=TOP)
 
