@@ -47,7 +47,9 @@ If a game is saved during a LAN multiplayer game, it can be later loaded as a no
 
 ### Multiplayer on LAN
 
-It is better to start a LAN game on a trusted network like a home or work network because security settings might prevent remote access.
+LAN multiplayer games aren't supported on networks which can assign more than 256 IP addresses (campus wifi and such). It might work if only the last part of the assigned IPs changes. If other parts of the IP addresses also change, hosted games will not be found.
+
+It is better to start a LAN game on a trusted network like a home or work network because security settings might prevent remote access on some systems.
 
 If a players on an OS X machine wants to join a game on LAN, it is recommended to increase the size of open files. The limit is 256 on new versions and it will cause `OSError: [Errno 24] Too many open files` because _Join a LAN Game_ uses threads to scan all the available IP's on LAN. In order to increase the limit, use `ulimit -n <new_limit>`. Anything above 300 should suffice.
 
