@@ -81,6 +81,7 @@ class LANStartPage(StartPage):
 
     ent = Entry(f, textvariable=self.name_var)
     ent.pack(side=LEFT)
+    ent.focus_set()
 
     self.play_var = IntVar()
     self.play_dict = {'2 players': 2,
@@ -148,6 +149,9 @@ class NormalStartPage(StartPage):
 
       ent = Entry(f, textvariable=var)
       ent.pack(side=LEFT)
+
+      if p == 1:
+        ent.focus_set()
 
       self.play_ents.append(ent)
 
