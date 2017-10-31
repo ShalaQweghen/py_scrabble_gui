@@ -98,15 +98,8 @@ class GamePage(Frame):
 
   def resolve_options(self, options={}):
     if self.joined_lan:
-      pop = Toplevel(self)
-      pop.title('Searching...')
-
-      # Show popup inside the main window
-      self.master.master.update()
-      x = self.master.master.winfo_rootx() + 200
-      pop.geometry('+{}+{}'.format(x, 300))
-
-      Label(pop, text='Trying to find a hosted game...').pack(side=TOP)
+      showinfo('Searching...',
+               'Will try to find a hosted game. This might take a while depending on the computer.\n\nClick OK to start.')
 
       # If a server is not found, a single value False comes
       # from the queue causing an exception.
@@ -115,8 +108,6 @@ class GamePage(Frame):
       except:
         self.options = options
         self.server_not_found = True
-
-      pop.destroy()
     else:
       self.options = options
 
