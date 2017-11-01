@@ -656,9 +656,13 @@ class GamePage(Frame):
     else:
       pack = self.queue.get()
 
+      # Other player passed letters
       if len(pack) == 3:
         self.bag = pack[1]
+        self.pass_num += 1
+
         self.init_turn()
+      # There was a challenge
       elif type(pack[1]) == type(True):
         # In this case, pack[1] is the flag for being challenged successfully or not
         if pack[1]:
@@ -1071,7 +1075,7 @@ class GamePage(Frame):
         else:
           rea = 'Game Is Over'
 
-        mes = '{} has won with {} points!'.format(self.winner[0], self.winner[1])
+        mes = '{} has won with {} points!'.format(self.winner[0].name, self.winner[1])
 
         self.game_online = False
 
@@ -1097,11 +1101,11 @@ class GamePage(Frame):
     info_f = Frame(pop)
     info_f.pack(side=TOP)
 
-    if not self.point_limit and not self.time_limit:
-      for player, subt in self.losers:
-        if subt > 0:
-          text = '{} {} points for {} left on rack...'.format(player.name, -subt, ', '.join(player.letters))
-          Label(info_f, text=text).pack(side=TOP)
+
+    for player, subt in self.losers:
+      if subt > 0:
+        text = '{} {} points for {} left on rack...'.format(player.name, -subt, ', '.join(player.letters))
+        Label(info_f, text=text).pack(side=TOP)
 
     button_f = Frame(pop)
     button_f.pack(side=TOP, pady=20)
@@ -1114,31 +1118,43 @@ class GamePage(Frame):
     pop.wait_window()
 
   def determine_winner(self):
-    if not self.time_limit and not self.point_limit:
-      # Substract the remaining letter values
-      for player in self.players:
+    # Substract the remaining letter values
+    # and add them to the winner if s/he has no tiles left
+    bonus_getter = None
+    bonus = 0
+
+    for player in self.players:
+      if len(player.letters) == 0:
+        bonus_getter = player
+      else:
         subt = 0
+
         for letter in player.letters:
           subt += self.word.letter_points[letter]
           player.update_score(self.word.letter_points[letter])
 
-        self.losers.append((player, subt))
+        bonus += subt
+
+      self.losers.append((player, subt))
+
+    if bonus_getter:
+      bonus_getter.score += bonus
 
     scores = [player.score for player in self.players]
     points = max(scores)
-    winner = self.players[scores.index(points)].name
+    winner = self.players[scores.index(points)]
 
     self.winner = (winner, points)
 
-    # Empty if there is time limit or word limit
-    if self.losers:
-      # Remove the winner from losers
+    # Remove the winner from losers if s/he has no tiles left
+    if len(self.winner[0].letters) == 0:
       del self.losers[scores.index(points)]
 
-
   def quit_game(self, win):
-    win.destroy()
     self.game_online = False
+
+    win.destroy()
+    self.destroy()
     self.master.master.quit()
 
   def restart_game(self):
