@@ -182,12 +182,18 @@ def create_lan_game(options, queue, bag):
 def join_lan_game(options, queue):
   cur_play_mark = 0
   game_online = True
+  host_ip = options.get('ip', None)
+  connected = 1
 
+  if host_ip:
+    server = socket.socket()
+    connected = server.connect_ex((host_ip, 11235))
+  else:
   # Automatically detect server ip and connect to it
   # Server is None if no server is found
-  server = find_server()
+    server = find_server()
 
-  if server:
+  if connected == 0 or server:
     send_msg(server, pickle.dumps(options['names'][0]))
 
     options, own_mark = pickle.loads(recv_msg(server))

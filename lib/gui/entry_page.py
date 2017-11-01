@@ -2,7 +2,7 @@
 #
 # See 'py_scrabble.pyw' for more info on copyright
 
-import pickle
+import pickle, re
 
 from tkinter import *
 from tkinter.filedialog import askopenfilename
@@ -36,7 +36,7 @@ class EntryPage(Frame):
     fb.pack(side=TOP)
 
     Button(fb, text='Join a Game (Auto)', command=self.join_game).pack(side=LEFT, pady=20, padx=10)
-    Button(fb, text='Join a Game (IP)', command=self.join_game).pack(side=LEFT, pady=20, padx=10)
+    Button(fb, text='Join a Game (IP)', command=self.join_with_ip).pack(side=LEFT, pady=20, padx=10)
 
     Button(self, text='Load Game', command=self.load_game).pack(side=TOP)
 
@@ -94,5 +94,25 @@ class EntryPage(Frame):
     if name:
       self.parent.master.set_geometry()
       self.parent.master.child = GamePage(self.parent, {'names': [name]})
+    else:
+      self.join_game()
+
+  def join_with_ip(self):
+    name = askstring('Enter Name', 'Enter your name:')
+
+    if name:
+      ip = askstring('Enter IP Address', 'Enter the Host IP Address:')
+      p = '(2[0-5][0-5]|1[0-9][0-9]|[1-9][0-9]|[0-9])'
+      ip_p = p + '\.' + p + '\.' + p + '\.' + p
+
+      if re.fullmatch(ip_p, ip):
+        self.parent.master.set_geometry()
+        self.parent.master.child = GamePage(self.parent, {'names': [name], 'ip': ip})
+      else:
+        self.join_with_ip()
+    else:
+      self.join_with_ip()
+
+
 
 

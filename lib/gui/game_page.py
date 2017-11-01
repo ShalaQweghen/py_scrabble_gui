@@ -38,7 +38,7 @@ class GamePage(Frame):
       self.joined_lan = True
       self.thread = threading.Thread(target=lh.join_lan_game, args=(options, self.queue))
       self.thread.start()
-      self.resolve_options()
+      self.resolve_options(options)
 
     self.run()
 
@@ -96,10 +96,11 @@ class GamePage(Frame):
     self.status_info = StringVar()
     self.words_info = StringVar()
 
-  def resolve_options(self, options={}):
+  def resolve_options(self, options):
     if self.joined_lan:
-      showinfo('Searching...',
-               'Will try to find a hosted game. This might take a while depending on the computer.\n\nClick OK to start.')
+      if not options.get('ip', None):
+        showinfo('Searching...',
+                 'Will try to find a hosted game. This might take a while depending on the computer.\n\nClick OK to start.')
 
       # If a server is not found, a single value False comes
       # from the queue causing an exception.
@@ -374,7 +375,10 @@ class GamePage(Frame):
     if self.lan_mode and not self.first_turn:
       if self.own_mark == self.cur_play_mark:
         self.disable_board()
-        if not self.chal_failed:
+
+        if self.letters_passed:
+          self.queue.put((self.own_mark, self.bag, self.game_online))
+        elif not self.chal_failed:
           self.queue.put((self.own_mark,
                           self.word,
                           self.w_range,
@@ -384,15 +388,14 @@ class GamePage(Frame):
                           self.bag,
                           self.board,
                           self.game_online))
-
-          # Wait till the queue is emptied by the other thread
-          # So that the same item is not captured by this thread
-          while not self.queue.empty():
-            continue
-        elif self.letters_passed:
-          self.queue.put((self.own_mark, self.bag))
         else:
-          self.queue.put((self.own_mark, False, None, None))
+          # Failed challenge
+          self.queue.put((self.own_mark, False, None, None, self.game_online))
+
+        # Wait till the queue is emptied by the other thread
+        # So that the same item is not captured by this thread
+        while not self.queue.empty():
+          continue
       elif not self.is_challenged:
         self.enable_board()
     elif self.joined_lan and self.first_turn:
@@ -653,8 +656,9 @@ class GamePage(Frame):
     else:
       pack = self.queue.get()
 
-      if len(pack) == 2:
+      if len(pack) == 3:
         self.bag = pack[1]
+        self.init_turn()
       elif type(pack[1]) == type(True):
         # In this case, pack[1] is the flag for being challenged successfully or not
         if pack[1]:
