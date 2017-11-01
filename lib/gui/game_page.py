@@ -1199,9 +1199,10 @@ class GamePage(Frame):
       # Prevent infinite loop
       self.server_not_found = False
       self.restart_game()
+
     if self.lan_mode:
       # End the socket
-      self.queue.put([False])
+      self.queue.put([self.own_mark, False])
       self.thread.join()
 
     super().destroy()
