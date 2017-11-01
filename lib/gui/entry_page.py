@@ -32,7 +32,11 @@ class EntryPage(Frame):
     Button(f, text='Start Game on Computer', command=self.start_normal_game).pack(side=LEFT, padx=10)
     Button(f, text='Start Game on LAN', command=self.start_lan_game).pack(side=LEFT, padx=10)
 
-    Button(self, text='Join a LAN Game', command=self.join_game).pack(side=TOP, pady=20)
+    fb = Frame(self, bg='azure')
+    fb.pack(side=TOP)
+
+    Button(fb, text='Join a Game (Auto)', command=self.join_game).pack(side=LEFT, pady=20, padx=10)
+    Button(fb, text='Join a Game (IP)', command=self.join_game).pack(side=LEFT, pady=20, padx=10)
 
     Button(self, text='Load Game', command=self.load_game).pack(side=TOP)
 
