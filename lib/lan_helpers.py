@@ -143,7 +143,7 @@ def create_lan_game(options, queue, bag):
         # the flag for ending the game because the player closed
         # the window.
         if not queue.empty():
-          game_online = queue.get()[0]
+          game_online = queue.get()[-1]
 
         # If the player didn't close the window, keep waiting for data
         continue
@@ -228,7 +228,7 @@ def join_lan_game(options, queue):
           # the flag for ending the game because the player closed
           # the window.
           if not queue.empty():
-            game_online = queue.get()[0]
+            game_online = queue.get()[-1]
 
           # If the player didn't close the window, keep waiting for data
           continue

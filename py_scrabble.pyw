@@ -41,7 +41,7 @@ class Root(Tk):
     ws = self.winfo_screenwidth()
     x = int((ws/2) - (704/2))
 
-    self.geometry("704x420+{}+{}".format(x, 0))
+    self.geometry('704x420+{}+{}'.format(x, 0))
     self.minsize(704, 420)
 
     self.draw_menu()
@@ -85,10 +85,13 @@ class Root(Tk):
 
   def set_geometry(self):
     if sys.platform == 'darwin':
-      self.geometry("750x790")
+      self.geometry('750x790')
       self.minsize(750, 790)
+    elif sys.platform == 'win32':
+      self.geometry('620x600')
+      self.minsize(620, 600)
     else:
-      self.geometry("700x650")
+      self.geometry('700x650')
       self.minsize(700, 650)
 
 

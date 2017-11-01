@@ -10,6 +10,9 @@ from tkinter import *
 if sys.platform == 'darwin':
   height = 2
   width = 4
+elif sys.platform == 'win32':
+  height = 1
+  width = 2
 else:
   height = 1
   width = 3
