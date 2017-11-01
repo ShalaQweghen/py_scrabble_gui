@@ -55,13 +55,14 @@ It is better to start a LAN game on a trusted network like a home or work networ
 
 If a player on an OS X machine wants to join a game on LAN, it is recommended to increase the size of open files. The limit is 256 on new versions and it will cause `OSError: [Errno 24] Too many open files` because _Join a Game (Auto)_ uses threads to scan all the available IP's on LAN. In order to increase the limit, use `ulimit -n <new_limit>`. Anything above 300 should suffice.
 
+## License
+
+This software is licensed under the [GNU General Public License 3.0](https://www.gnu.org/licenses/gpl-3.0.txt).
+
 ## Screenshots
 
 ![](pics/pic_1.png)
 ![](pics/pic_2.png)
 ![](pics/pic_3.png)
 ![](pics/pic_4.png)
-
-## License
-
-This software is licensed under the [GNU General Public License 3.0](https://www.gnu.org/licenses/gpl-3.0.txt).
+![](pics/pic_5.png)

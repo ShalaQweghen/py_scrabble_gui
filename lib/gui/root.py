@@ -2,7 +2,7 @@
 #
 # See 'py_scrabble.pyw' for more info on copyright
 
-import os, sys
+import sys
 
 from tkinter import *
 from tkinter.messagebox import askyesno
@@ -14,7 +14,6 @@ class Root(Tk):
     Tk.__init__(self)
     self.title('PyScrabble')
     self.config(bg='azure')
-    #self.iconbitmap(os.getcwd() + '/pics/pyscrabble.ico')
     self.protocol('WM_DELETE_WINDOW', self.quit_game)
 
     self.dict = dic
