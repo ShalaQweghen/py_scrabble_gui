@@ -7,6 +7,7 @@ import pickle, re
 from tkinter import *
 from tkinter.filedialog import askopenfilename
 from tkinter.simpledialog import askstring
+from tkinter.messagebox import showwarning
 
 from lib.gui.game_page import GamePage
 from lib.gui.start_page import NormalStartPage, LANStartPage
@@ -95,24 +96,20 @@ class EntryPage(Frame):
       self.parent.master.set_geometry()
       self.parent.master.child = GamePage(self.parent, {'names': [name]})
     else:
-      self.join_game()
+      showwarning('No Name', 'No Name Provided.\n\nTry Again.')
 
   def join_with_ip(self):
     name = askstring('Enter Name', 'Enter your name:')
 
     if name:
       ip = askstring('Enter IP Address', 'Enter the Host IP Address:')
-      p = '(2[0-5][0-5]|1[0-9][0-9]|[1-9][0-9]|[0-9])'
+      p = '(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])'
       ip_p = p + '\.' + p + '\.' + p + '\.' + p
 
       if re.fullmatch(ip_p, ip):
         self.parent.master.set_geometry()
         self.parent.master.child = GamePage(self.parent, {'names': [name], 'ip': ip})
       else:
-        self.join_with_ip()
+        showwarning('Invalid Entry', 'IP Address is Invalid.\n\nTry Again.')
     else:
-      self.join_with_ip()
-
-
-
-
+      showwarning('No Name', 'No Name Provided.\n\nTry Again.')

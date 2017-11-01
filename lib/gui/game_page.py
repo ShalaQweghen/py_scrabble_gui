@@ -1129,9 +1129,12 @@ class GamePage(Frame):
       else:
         subt = 0
 
-        for letter in player.letters:
-          subt += self.word.letter_points[letter]
-          player.update_score(self.word.letter_points[letter])
+        try:
+          for letter in player.letters:
+            subt += self.word.letter_points[letter]
+            player.update_score(self.word.letter_points[letter])
+        except AttributeError:
+          pass
 
         bonus += subt
 
