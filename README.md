@@ -19,11 +19,13 @@ Clone the game and enjoy it. If you have any feedbacks, I will very much appreci
 
 ### Start a game
 
-`cd` into py_scrabble_gui folder and run `python3 py_scrabble.pyw`.
+#### Windows
 
-Windows users can double click on `py_scrabble.pyw`.
+Go to the _py_scrabble_gui_ folder and double click on `py_scrabble.pyw`.
 
-Unix-based OS users can make the file executable by running `chmod +x py_scrabble.pyw`.
+#### Unix-based OS
+
+On the terminal, `cd` into _py_scrabble_gui_ folder and run `python3 py_scrabble.pyw`. You can also run `chmod +x py_scrabble.pyw` and make the file executable.
 
 ### Blank tile
 
