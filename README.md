@@ -41,7 +41,9 @@ A game of 2, 3 or 4 players can be played on a single computer. The letters on t
 
 ### Playing against computer
 
-Computer goes through permutations of letters on its rack and picks the valid move with the most points. A turn for computer takes about 1 minute 30 seconds (on i5 1.6 GHz with 8 GB RAM) depending on the computer.
+Computer goes through permutations of letters on its rack and picks the valid move with the most points. A turn for computer takes about 1 minute 20 seconds (on i5 1.6 GHz with 8 GB RAM) depending on the computer.
+
+If you want to end the game while it is computer's turn and try to close the program, you will have to wait till the computer's permutations are over, which takes about 1 minute (on i5 1.6 GHz with 8 GB RAM).
 
 ### Save a game
 

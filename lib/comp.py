@@ -84,6 +84,3 @@ class AIOpponent(Player):
 
     bag.put_back(passed_letters)
     self.draw_letters(bag, len(passed_letters))
-
-
-

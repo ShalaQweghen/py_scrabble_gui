@@ -2,7 +2,7 @@
 #
 # See 'py_scrabble.pyw' for more info on copyright
 
-import threading, re, os, pickle, queue
+import threading, re, os, pickle, queue, sys
 
 from tkinter import *
 from tkinter.messagebox import askyesno, showwarning, showinfo

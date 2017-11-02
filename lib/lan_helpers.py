@@ -2,7 +2,7 @@
 #
 # See 'py_scrabble.pyw' for more info on copyright
 
-import struct, socket, re, threading, pickle
+import struct, socket, re, threading, pickle, sys
 
 # send_msg, recv_msg, recvall are taken from https://stackoverflow.com/a/17668009
 # and modified as needed for the game
@@ -95,6 +95,30 @@ def find_server():
   else:
   	return None
 
+def accept_players(server, start, options, lan_players):
+  for i in range(start, options['play_num']):
+    # Prevent blocking so the server can quit game while waiting
+    server.setblocking(False)
+
+    try:
+      # Raises BlockingIOError if set to non-blocking
+      cli, addr = server.accept()
+    except BlockingIOError:
+      server.setblocking(True)
+
+      # Return arguments with i as start so that it can continue
+      # where it left while waiting to prevent infinite loop
+      return (server, i, options, lan_players)
+
+    server.setblocking(True)
+
+    lan_players.append(cli)
+    name = pickle.loads(recv_msg(cli))
+    options['names'].append(name)
+
+  # None to signal to end the loop if all the players joined the game
+  return None
+
 def create_lan_game(options, queue, bag):
   # Server goes first
   own_mark = 0
@@ -105,18 +129,27 @@ def create_lan_game(options, queue, bag):
   play_num = options['play_num']
 
   server = socket.socket()
+  server.setblocking(False)
 
   server.bind(('', 11235))
   server.listen()
 
   # Let players join the game and add their names into options before
   # serving them the options .The range starts from 1 because it doesn't
-  # include the player initializing the server.
-  for i in range(1, options['play_num']):
-    cli, addr = server.accept()
-    lan_players.append(cli)
-    name = pickle.loads(recv_msg(cli))
-    options['names'].append(name)
+  # include the player initializing the server. This is done in a separate
+  # function in order for it to be non-blocking while waiting for players.
+  # Anything returned apart from None means that it should continue.
+  retry = accept_players(server, 1, options, lan_players)
+
+  while retry:
+    # If there is something in the queue at this point,
+    # it is for quitting the game
+    if not queue.empty():
+      server.close()
+
+      sys.exit()
+
+    retry = accept_players(*retry)
 
   # m is each joined player's mark to determine their turn
   for m, pl in enumerate(lan_players):
