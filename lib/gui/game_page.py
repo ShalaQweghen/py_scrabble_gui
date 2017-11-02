@@ -369,9 +369,6 @@ class GamePage(Frame):
   def init_turn(self):
     self.turns += 1
 
-    if self.time_limit and self.first_turn:
-      self.countdown()
-
     if self.lan_mode and not self.first_turn:
       if self.own_mark == self.cur_play_mark:
         self.disable_board()
@@ -413,6 +410,9 @@ class GamePage(Frame):
 
     self.update_info()
     self.decorate_rack()
+
+    if self.time_limit and self.first_turn:
+      self.countdown()
 
     self.loading = False
     self.first_turn = False
