@@ -1,10 +1,16 @@
-import pickle, os
+# Copyright (C) 2017  Serafettin Yilmaz
+#
+# See 'py_scrabble.pyw' for more info on copyright
+
+import pickle, re
 
 from tkinter import *
 from tkinter.filedialog import askopenfilename
+from tkinter.simpledialog import askstring
+from tkinter.messagebox import showwarning
 
 from lib.gui.game_page import GamePage
-from lib.gui.start_page import NormalStartPage#, LANStartPage
+from lib.gui.start_page import NormalStartPage, LANStartPage
 
 class EntryPage(Frame):
   def __init__(self, parent, dic='./dics/sowpods.txt'):
@@ -25,24 +31,33 @@ class EntryPage(Frame):
 
     Button(f, text='Start Computer Game', command=self.start_computer_game).pack(side=LEFT, padx=10)
     Button(f, text='Start Game on Computer', command=self.start_normal_game).pack(side=LEFT, padx=10)
-    Button(f, text='Start Game on LAN', command=lambda: self.go_to_frame('LANStartPage'), state=DISABLED).pack(side=LEFT, padx=10)
+    Button(f, text='Start Game on LAN', command=self.start_lan_game).pack(side=LEFT, padx=10)
 
-    Button(self, text='Load Game', command=self.load_game).pack(side=TOP, pady=30)
+    fb = Frame(self, bg='azure')
+    fb.pack(side=TOP)
+
+    Button(fb, text='Join a Game (Auto)', command=self.join_game).pack(side=LEFT, pady=20, padx=10)
+    Button(fb, text='Join a Game (IP)', command=self.join_with_ip).pack(side=LEFT, pady=20, padx=10)
+
+    Button(self, text='Load Game', command=self.load_game).pack(side=TOP)
 
 
   def start_computer_game(self):
-    self.parent.master.geometry("750x785")
-    self.parent.master.minsize(750, 785)
+    self.parent.master.set_geometry()
 
-    page = GamePage(self.parent, {'comp_mode': True, 'names': ['Player', 'Computer'], 'players': 2}, self.dict)
-    page.tkraise()
+    GamePage(self.parent, {'comp_mode': True, 'names': ['Player', 'Computer'], 'play_num': 2}, self.dict)
 
   def start_normal_game(self):
-    self.parent.master.geometry("704x440")
-    self.parent.master.minsize(704, 440)
+    self.parent.master.geometry("704x400")
+    self.parent.master.minsize(704, 400)
 
-    page = NormalStartPage(self.parent, self.dict)
-    page.tkraise()
+    NormalStartPage(self.parent, self.dict)
+
+  def start_lan_game(self):
+    self.parent.master.geometry("704x450")
+    self.parent.master.minsize(704, 450)
+
+    LANStartPage(self.parent, self.dict)
 
   def load_game(self):
     filename = askopenfilename(initialdir='./saves', filetypes=(('Pickle Files', '*.pickle'),))
@@ -52,17 +67,16 @@ class EntryPage(Frame):
       data = pickle.load(file)
 
       options = {
-                  'challenge_mode': data['chal_mode'],
+                  'chal_mode': data['chal_mode'],
                   'comp_mode': data['comp_mode'],
                   'normal_mode': data['norm_mode'],
                   'time_limit': data['time_limit'],
                   'point_limit': data['point_limit'],
-                  'players': data['play_num'],
+                  'play_num': data['play_num'],
                   'loading': True
                 }
 
-      self.parent.master.geometry("750x785")
-      self.parent.master.minsize(750, 785)
+      self.parent.master.set_geometry()
 
       game = GamePage(self.master, options)
 
@@ -73,6 +87,29 @@ class EntryPage(Frame):
       game.op_score = data['op_score']
       game.seconds = data['seconds']
       game.minutes = data['minutes']
+      game.turns = data['turns']
 
+  def join_game(self):
+    name = askstring('Enter Name', 'Enter your name:')
 
+    if name:
+      self.parent.master.set_geometry()
+      self.parent.master.child = GamePage(self.parent, {'names': [name]})
+    else:
+      showwarning('No Name', 'No Name Provided.\n\nTry Again.')
 
+  def join_with_ip(self):
+    name = askstring('Enter Name', 'Enter your name:')
+
+    if name:
+      ip = askstring('Enter IP Address', 'Enter the Host IP Address:')
+      p = '(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])'
+      ip_p = p + '\.' + p + '\.' + p + '\.' + p
+
+      if re.fullmatch(ip_p, ip):
+        self.parent.master.set_geometry()
+        self.parent.master.child = GamePage(self.parent, {'names': [name], 'ip': ip})
+      else:
+        showwarning('Invalid Entry', 'IP Address is Invalid.\n\nTry Again.')
+    else:
+      showwarning('No Name', 'No Name Provided.\n\nTry Again.')

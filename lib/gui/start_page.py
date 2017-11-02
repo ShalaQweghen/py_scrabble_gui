@@ -1,3 +1,7 @@
+# Copyright (C) 2017  Serafettin Yilmaz
+#
+# See 'py_scrabble.pyw' for more info on copyright
+
 import random
 
 from tkinter import *
@@ -19,7 +23,7 @@ class StartPage(Frame):
 
     self.but_var.set('Start Game')
 
-    self.players = []
+    self.play_ents = []
 
     self.draw_heading()
     self.draw_player_name()
@@ -62,41 +66,53 @@ class StartPage(Frame):
 
   def construct_options(self): pass
 
-#############################################################################
+############################################################################
 
-# class LANStartPage(StartPage):
-#   def draw_player_name(self):
-#     self.name_var = StringVar()
+class LANStartPage(StartPage):
+  def draw_player_options(self):
+    self.but_var.set('Start Game')
 
-#     f = Frame(self, bg='azure')
-#     f.pack(side=TOP, pady=20)
+    f = Frame(self.opt_cont, pady=10, bg='azure')
+    f.pack()
 
-#     Label(f, text='Enter Your Name:', bg='azure').pack(side=LEFT)
-#     Entry(f, textvariable=self.name_var).pack(side=LEFT)
+    self.name_var = StringVar()
 
-#   def draw_player_options(self):
-#     self.play_var = IntVar()
-#     self.play_dict = {'2 players': 2,
-#                       '3 players': 3,
-#                       '4 players': 4}
+    Label(f, text='Enter Your Name:', bg='azure').pack(side=LEFT)
 
-#     pof = LabelFrame(self.opt_cont, bg='azure', pady=10, padx=10)
-#     pof.pack(side=LEFT)
+    ent = Entry(f, textvariable=self.name_var)
+    ent.pack(side=LEFT)
+    ent.focus_set()
 
-#     for k, v in self.play_dict.items():
-#       r = Radiobutton(pof, bg='azure', text=k, variable=self.play_var, value=v)
-#       r.pack(anchor=NW)
+    self.play_var = IntVar()
+    self.play_dict = {'2 players': 2,
+                      '3 players': 3,
+                      '4 players': 4}
 
-#     self.play_var.set(2)
+    pof = LabelFrame(self.opt_cont, bg='azure', pady=10, padx=10)
+    pof.pack()
 
-#   def construct_options(self):
-#     self.options['network_mode'] = True
-#     self.options['time_limit'] = self.time_var.get()
-#     self.options['player_name'] = self.play_var.get()
-#     self.options['players'] = self.play_var.get()
-#     self.options['challenge_mode'] = bool(self.chal_var.get())
+    for k, v in self.play_dict.items():
+      r = Radiobutton(pof, bg='azure', text=k, variable=self.play_var, value=v)
+      r.pack(anchor=NW)
 
-#############################################################################
+    self.play_var.set(2)
+
+  def construct_options(self):
+    self.options = {}
+    self.options['names'] = [self.name_var.get()]
+    self.options['lan_mode'] = True
+    self.options['time_limit'] = self.time_var.get()
+    self.options['play_num'] = self.play_var.get()
+    self.options['chal_mode'] = bool(self.chal_var.get())
+    self.options['point_limit'] = self.point_var.get()
+
+    self.parent.master.set_geometry()
+
+    self.parent.master.child = GamePage(self.parent, self.options)
+
+    self.destroy()
+
+############################################################################
 
 class NormalStartPage(StartPage):
   def draw_player_options(self):
@@ -117,8 +133,8 @@ class NormalStartPage(StartPage):
     self.play_var.set(2)
 
   def draw_name_fields(self):
-    self.parent.master.geometry('704x580')
-    self.parent.master.minsize(704, 580)
+    self.parent.master.geometry('704x500')
+    self.parent.master.minsize(704, 500)
 
     t = Frame(self, pady=20, padx=10, bg='azure')
     t.pack()
@@ -134,12 +150,15 @@ class NormalStartPage(StartPage):
       ent = Entry(f, textvariable=var)
       ent.pack(side=LEFT)
 
-      self.players.append(ent)
+      if p == 1:
+        ent.focus_set()
+
+      self.play_ents.append(ent)
 
   def get_player_names(self):
     names = []
 
-    for name in self.players:
+    for name in self.play_ents:
       names.append(name.get().strip().capitalize())
 
     self.options = {'names': names}
@@ -147,20 +166,18 @@ class NormalStartPage(StartPage):
     random.shuffle(self.options['names'])
 
   def construct_options(self):
-    if self.players:
+    if self.play_ents:
       self.get_player_names()
 
       self.options['normal_mode'] = True
       self.options['time_limit'] = self.time_var.get()
-      self.options['players'] = self.play_var.get()
-      self.options['challenge_mode'] = bool(self.chal_var.get())
+      self.options['play_num'] = self.play_var.get()
+      self.options['chal_mode'] = bool(self.chal_var.get())
       self.options['point_limit'] = self.point_var.get()
 
-      self.parent.master.geometry('750x785')
-      self.parent.master.minsize(750, 785)
+      self.parent.master.set_geometry()
 
-      page = GamePage(self.parent, self.options, self.dict)
-      page.tkraise()
+      GamePage(self.parent, self.options, self.dict)
 
       self.destroy()
     else:
