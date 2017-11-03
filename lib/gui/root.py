@@ -7,8 +7,6 @@ import sys
 from tkinter import *
 from tkinter.messagebox import askyesno
 
-# from tkinterhtml import HtmlFrame
-
 from lib.gui.entry_page import EntryPage
 
 class Root(Tk):
