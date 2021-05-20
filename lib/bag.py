@@ -7,10 +7,11 @@ import random
 class Bag:
 	def __init__(self):
 		self.bag = []
-		self._fill_bag()
+		self.__fill_bag()
 
-	def _fill_bag(self):
+	def __fill_bag(self):
 		self.bag.extend(['Q','Z','J','X','K'])
+		
 		for i in range(2): self.bag.extend(['F','H','V','W','Y','B','C','M','P','@'])
 		for i in range(3): self.bag.extend(['G'])
 		for i in range(4): self.bag.extend(['D','U','S','L'])
@@ -21,6 +22,7 @@ class Bag:
 
 	def draw(self):
 		random.shuffle(self.bag)
+
 		try:
 			return self.bag.pop()
 		except IndexError:

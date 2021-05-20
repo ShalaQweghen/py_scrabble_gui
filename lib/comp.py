@@ -24,7 +24,7 @@ class AIOpponent(Player):
 
     # All the possible valid permutations of the letters
     for n in range(2, len(self.letters) + 1):
-      word_set = word_set.union(self._permute(n, dic))
+      word_set = word_set.union(self.__permute(n, dic))
 
     # Check if the word can be played validly horizontally or vertically
     for word in word_set:
@@ -40,7 +40,7 @@ class AIOpponent(Player):
 
     if len(words) == 0:
       self.is_passing = True
-      self._pass_letters(bag)
+      self.__pass_letters(bag)
     else:
       self.word = words[0]
 
@@ -60,22 +60,22 @@ class AIOpponent(Player):
           self.word = word
 
       # Put back the wild letter character in the letters array
-      for letter in self.wild_letters:
+      for _ in self.wild_letters:
         self.letters[self.letters.index('S')] = '@'
 
       return self.word
 
-  def _permute(self, n, dic):
+  def __permute(self, n, dic):
     words = set()
     perms = itertools.permutations(self.letters, n)
 
     for perm in perms:
-      if dic.valid_word(''.join(perm)):
+      if dic.is_valid_word(''.join(perm)):
         words.add(''.join(perm))
 
     return words
 
-  def _pass_letters(self, bag):
+  def __pass_letters(self, bag):
     # Randomly pass three letters
     passed_letters = random.sample(self.letters, 3)
 

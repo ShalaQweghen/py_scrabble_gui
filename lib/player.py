@@ -4,8 +4,6 @@
 
 import re
 
-from lib.word import Word
-
 class Player:
 	def __init__(self, name=None):
 		self.name = name
@@ -19,7 +17,7 @@ class Player:
 
 	def draw_letters(self, bag, amount=7):
 		for i in range(amount):
-			self.letters.append(self._pick_from(bag))
+			self.letters.append(self.__pick_from(bag))
 
 			# $ means there are no letters left in the bag
 			if self.letters[-1] != '$':
@@ -33,12 +31,12 @@ class Player:
 		if self.passed_letters:
 			for letter in self.passed_letters:
 				if letter in self.letters:
-					self._remove_tile(letter)
+					self.__remove_tile(letter)
 		else:
 			aob = len(self.word.aob_list)
 
 			for letter in self.word.word:
-				self._remove_tile(letter)
+				self.__remove_tile(letter)
 
 			if len(self.letters) == 0 and len(bag.bag) != 0:
 				self.full_bonus = True
@@ -62,11 +60,11 @@ class Player:
 			if self.full_bonus:
 				self.score += 60
 
-	def _pick_from(self, bag):
+	def __pick_from(self, bag):
 		if bag:
 			return bag.draw()
 
-	def _remove_tile(self, letter):
+	def __remove_tile(self, letter):
 		if letter not in self.wild_letters:
 			if self.passed_letters and letter in self.letters:
 				self.letters.remove(letter)

@@ -21,8 +21,8 @@ class Word:
     self.extra_words = []
     self.wild_letters = []
 
-    self.range = self._set_range()
-    self.letter_points = self._set_letter_points()
+    self.range = self.__set_range()
+    self.letter_points = self.__set_letter_points()
 
   # Builds the extra words made by making a word. Populates the extra words
   # array and return True if all the words are valid.
@@ -43,16 +43,16 @@ class Word:
         check_list.append(True)
       # If it is not already on the board and there are no occupied squares
       # It is a valid one because it is standing alone not in an extra word
-      elif self.board.square_not_occupied(square, self.direction):
+      elif not self.board.square_occupied(square, self.direction):
         check_list.append(True)
       # If the letter is not already on the board and there are spots occupied
       # around it, it means it is suitable to make an extra word
       else:
-        self.extra_words.append(self._set_extra_word(square, extra_word))
+        self.extra_words.append(self.__set_extra_word(square, extra_word))
 
         # In challenge mode, no need to check if it is in the dictionary
         # Check the last word as others are already checked
-        if self.chal_mode or self.dict.valid_word(self.extra_words[-1][0]):
+        if self.chal_mode or self.dict.is_valid_word(self.extra_words[-1][0]):
           check_list.append(True)
         else:
           # Record the invalid word and reset the extra words
@@ -72,10 +72,10 @@ class Word:
     self.word_bonus = bonus.get('word', None)
     self.letter_bonus = bonus.get('letter', None)
 
-    self.points = self._calculate_word_points(self.word, self.range)
+    self.points = self.__calculate_word_points(self.word, self.range)
 
     for word, w_range in self.extra_words:
-      self.points += self._calculate_word_points(word, w_range)
+      self.points += self.__calculate_word_points(word, w_range)
 
     return self.points
 
@@ -109,7 +109,7 @@ class Word:
         return False
 
       if not self.chal_mode:
-        if not self.dict.valid_word(self.word):
+        if not self.dict.is_valid_word(self.word):
           return False
 
       if not self.process_extra_words():
@@ -122,11 +122,11 @@ class Word:
       return True
 
   # Return range if valid or False
-  def _set_range(self):
+  def __set_range(self):
     if self.direction == "r":
-      squares = self._set_range_to_right()
+      squares = self.__set_range_to_right()
     else:
-      squares = self._set_range_to_down()
+      squares = self.__set_range_to_down()
 
     # Check if the squares returned are in the range of 'a' to 'o' and 1 to 15
     for s in squares:
@@ -138,7 +138,7 @@ class Word:
 
     return squares
 
-  def _set_range_to_right(self):
+  def __set_range_to_right(self):
     # Determine the letter part of the last square of the word.
     # Because it is to the right, modify the letter part
     last = chr((ord(self.start[0]) + len(self.word)))
@@ -146,16 +146,16 @@ class Word:
     # Check if the number part is 1 digit or 2 digits
     if len(self.start) == 2:
       # Make a list of letters by making use of ascii numbers
-      letter_range = list(range(ord(self.start[0]), ord(last)))
+      letter_range = range(ord(self.start[0]), ord(last))
 
       # Map the number part of the spot with letters in the range
-      return list(map(lambda x: chr(x) + self.start[1], letter_range))
+      return map(lambda x: chr(x) + self.start[1], letter_range)
     else:
-      letter_range = list(range(ord(self.start[0]), ord(last)))
+      letter_range = range(ord(self.start[0]), ord(last))
 
-      return list(map(lambda x: chr(x) + self.start[1:], letter_range))
+      return map(lambda x: chr(x) + self.start[1:], letter_range)
 
-  def _set_range_to_down(self):
+  def __set_range_to_down(self):
     # Check if the number part is 1 digit or 2 digits
     if len(self.start) == 2:
       # Determine the number part of the last square of the word.
@@ -163,17 +163,17 @@ class Word:
       # Numbers decrease as it goes down. This one is 1 digit.
       last = int(self.start[1]) - len(self.word)
       # Make a list of numbers in reverse order
-      number_range = list(range(int(self.start[1]), last, -1))
+      number_range = range(int(self.start[1]), last, -1)
 
       # Map the letter part of the spot with numbers in the range
-      return list(map(lambda x: self.start[0] + str(x), number_range))
+      return map(lambda x: self.start[0] + str(x), number_range)
     else:
       last = int(self.start[1:]) - len(self.word)
-      number_range = list(range(int(self.start[1:]), last, -1))
+      number_range = range(int(self.start[1:]), last, -1)
 
-      return list(map(lambda x: self.start[0] + str(x), number_range))
+      return map(lambda x: self.start[0] + str(x), number_range)
 
-  def _set_up_or_left_extra_word(self, square, extra_word):
+  def __set_up_or_left_extra_word(self, square, extra_word):
     while self.board.occupied(square, self.direction, self.board.up_or_left):
       square = self.board.up_or_left(square, self.direction)
       # If the occupied squares are towards right or up,
@@ -181,7 +181,7 @@ class Word:
       extra_word[0].insert(0, self.board.board[square])
       extra_word[1].insert(0, square)
 
-  def _set_down_or_right_extra_word(self, square, extra_word):
+  def __set_down_or_right_extra_word(self, square, extra_word):
     while self.board.occupied(square, self.direction, self.board.down_or_right):
       square = self.board.down_or_right(square, self.direction)
       # If the occupied squares are towards left or down,
@@ -189,32 +189,32 @@ class Word:
       extra_word[0].append(self.board.board[square])
       extra_word[1].append(square)
 
-  def _set_extra_word(self, square, extra_word):
-    self._set_up_or_left_extra_word(square, extra_word)
-    self._set_down_or_right_extra_word(square, extra_word)
+  def __set_extra_word(self, square, extra_word):
+    self.__set_up_or_left_extra_word(square, extra_word)
+    self.__set_down_or_right_extra_word(square, extra_word)
     extra_word[0] = ''.join(extra_word[0])
 
     return extra_word
 
-  def _set_letter_points(self):
+  def __set_letter_points(self):
     points = {}
 
-    for letter in list('LSUNRTOAIE'):
+    for letter in 'LSUNRTOAIE':
       points[letter] = 1
 
-    for letter in list('GD'):
+    for letter in 'GD':
       points[letter] = 2
 
-    for letter in list('BCMP'):
+    for letter in 'BCMP':
       points[letter] = 3
 
-    for letter in list('FHVWY'):
+    for letter in 'FHVWY':
       points[letter] = 4
 
-    for letter in list('JX'):
+    for letter in 'JX':
       points[letter] = 8
 
-    for letter in list('QZ'):
+    for letter in 'QZ':
       points[letter] = 10
 
     points['K'] = 5
@@ -222,7 +222,7 @@ class Word:
 
     return points
 
-  def _calculate_word_points(self, word, w_range):
+  def __calculate_word_points(self, word, w_range):
     word_points = 0
 
     for letter, square in zip(word, w_range):

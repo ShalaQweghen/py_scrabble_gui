@@ -13,5 +13,5 @@ class Dict:
     for word in words:
       self.dict[word] = True
 
-  def valid_word(self, word):
+  def is_valid_word(self, word):
     return self.dict[word]
