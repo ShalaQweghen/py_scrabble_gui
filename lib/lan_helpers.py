@@ -227,59 +227,63 @@ def join_lan_game(options, queue):
     server = find_server()
 
   if connected == 0 or server:
-    send_msg(server, pickle.dumps(options['names'][0]))
+    try:
+      send_msg(server, pickle.dumps(options['names'][0]))
+    except BrokenPipeError:
+      # Signal that no server was found
+      queue.put(False)
+    else:
+      options, own_mark = pickle.loads(recv_msg(server))
+      queue.put((options, own_mark))
 
-    options, own_mark = pickle.loads(recv_msg(server))
-    queue.put((options, own_mark))
+      play_num = options['play_num']
 
-    play_num = options['play_num']
+      players, bag = pickle.loads(recv_msg(server))
+      queue.put((players, bag))
 
-    players, bag = pickle.loads(recv_msg(server))
-    queue.put((players, bag))
+      while not queue.empty():
+        continue
 
-    while not queue.empty():
-      continue
-
-    while game_online:
-      if own_mark == cur_play_mark:
-        if not queue.empty():
-          turn_pack = queue.get()
-          game_online = turn_pack[-1]
-
-          send_msg(server, pickle.dumps(turn_pack))
-
-          cur_play_mark = set_lan_cpm(cur_play_mark, turn_pack, play_num)
-      else:
-        # When the connection is non-blocking, recv raises
-        # an exception. Catch the exception and restart the
-        # loop unless quitting signal is sent.
-        try:
-          # False is for setting the connection non-blocking
-          turn_pack = recv_msg(server, False)
-        except BlockingIOError:
-          # At this point, only thing that can be in the queue is
-          # the flag for ending the game because the player closed
-          # the window.
+      while game_online:
+        if own_mark == cur_play_mark:
           if not queue.empty():
-            game_online = queue.get()[-1]
+            turn_pack = queue.get()
+            game_online = turn_pack[-1]
 
-          # If the player didn't close the window, keep waiting for data
-          continue
+            send_msg(server, pickle.dumps(turn_pack))
 
-        turn_pack = pickle.loads(turn_pack)
-        game_online = turn_pack[-1]
+            cur_play_mark = set_lan_cpm(cur_play_mark, turn_pack, play_num)
+        else:
+          # When the connection is non-blocking, recv raises
+          # an exception. Catch the exception and restart the
+          # loop unless quitting signal is sent.
+          try:
+            # False is for setting the connection non-blocking
+            turn_pack = recv_msg(server, False)
+          except BlockingIOError:
+            # At this point, only thing that can be in the queue is
+            # the flag for ending the game because the player closed
+            # the window.
+            if not queue.empty():
+              game_online = queue.get()[-1]
 
-        # If a player is not challenged, the first element of turn_pack is
-        # a player's mark. This prevents accidentally receiving own turn_pack
-        if turn_pack[0] != own_mark:
-          queue.put(turn_pack)
-
-          cur_play_mark = set_lan_cpm(cur_play_mark, turn_pack, play_num)
-
-          while not queue.empty():
+            # If the player didn't close the window, keep waiting for data
             continue
 
-    server.close()
+          turn_pack = pickle.loads(turn_pack)
+          game_online = turn_pack[-1]
+
+          # If a player is not challenged, the first element of turn_pack is
+          # a player's mark. This prevents accidentally receiving own turn_pack
+          if turn_pack[0] != own_mark:
+            queue.put(turn_pack)
+
+            cur_play_mark = set_lan_cpm(cur_play_mark, turn_pack, play_num)
+
+            while not queue.empty():
+              continue
+    finally:
+      server.close()
   else:
     # Signal that no server was found
     queue.put(False)

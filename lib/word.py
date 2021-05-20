@@ -149,11 +149,11 @@ class Word:
       letter_range = range(ord(self.start[0]), ord(last))
 
       # Map the number part of the spot with letters in the range
-      return map(lambda x: chr(x) + self.start[1], letter_range)
+      return list(map(lambda x: chr(x) + self.start[1], letter_range))
     else:
       letter_range = range(ord(self.start[0]), ord(last))
 
-      return map(lambda x: chr(x) + self.start[1:], letter_range)
+      return list(map(lambda x: chr(x) + self.start[1:], letter_range))
 
   def __set_range_to_down(self):
     # Check if the number part is 1 digit or 2 digits
@@ -166,12 +166,12 @@ class Word:
       number_range = range(int(self.start[1]), last, -1)
 
       # Map the letter part of the spot with numbers in the range
-      return map(lambda x: self.start[0] + str(x), number_range)
+      return list(map(lambda x: self.start[0] + str(x), number_range))
     else:
       last = int(self.start[1:]) - len(self.word)
       number_range = range(int(self.start[1:]), last, -1)
 
-      return map(lambda x: self.start[0] + str(x), number_range)
+      return list(map(lambda x: self.start[0] + str(x), number_range))
 
   def __set_up_or_left_extra_word(self, square, extra_word):
     while self.board.occupied(square, self.direction, self.board.up_or_left):

@@ -2,12 +2,17 @@
 #
 # See 'py_scrabble.pyw' for more info on copyright
 
-import pickle, re
+import pickle, re, platform
 
 from tkinter import *
 from tkinter.filedialog import askopenfilename
 from tkinter.simpledialog import askstring
 from tkinter.messagebox import showwarning
+
+from tkmacosx import Button as MacOsButton
+
+if platform.system() == "Darwin":
+  Button = MacOsButton
 
 from lib.gui.game_page import GamePage
 from lib.gui.start_page import NormalStartPage, LANStartPage
@@ -29,17 +34,17 @@ class EntryPage(Frame):
     f = Frame(self, bg='azure')
     f.pack(side=TOP)
 
-    Button(f, text='Start Computer Game', command=self.start_computer_game).pack(side=LEFT, padx=10)
-    Button(f, text='Start Game on Computer', command=self.start_normal_game).pack(side=LEFT, padx=10)
-    Button(f, text='Start Game on LAN', command=self.start_lan_game).pack(side=LEFT, padx=10)
+    Button(f, bg='black', fg="white", text='Start Computer Game', command=self.start_computer_game).pack(side=LEFT, padx=10)
+    Button(f, bg='black', fg="white", text='Start Game on Computer', command=self.start_normal_game).pack(side=LEFT, padx=10)
+    Button(f, bg='black', fg="white", text='Start Game on LAN', command=self.start_lan_game).pack(side=LEFT, padx=10)
 
     fb = Frame(self, bg='azure')
     fb.pack(side=TOP)
 
-    Button(fb, text='Join a Game (Auto)', command=self.join_game).pack(side=LEFT, pady=20, padx=10)
-    Button(fb, text='Join a Game (IP)', command=self.join_with_ip).pack(side=LEFT, pady=20, padx=10)
+    Button(fb, bg='black', fg="white", text='Join a Game (Auto)', command=self.join_game).pack(side=LEFT, pady=20, padx=10)
+    Button(fb, bg='black', fg="white", text='Join a Game (IP)', command=self.join_with_ip).pack(side=LEFT, pady=20, padx=10)
 
-    Button(self, text='Load Game', command=self.load_game).pack(side=TOP)
+    Button(self, bg='black', fg="white", text='Load Game', command=self.load_game).pack(side=TOP)
 
 
   def start_computer_game(self):

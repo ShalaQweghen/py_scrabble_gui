@@ -2,12 +2,17 @@
 #
 # See 'py_scrabble.pyw' for more info on copyright
 
-import threading, re, os, pickle, queue, sys
+import threading, re, os, pickle, queue, sys, platform
 
 from tkinter import *
 from tkinter.messagebox import askyesno, showwarning, showinfo
 from tkinter.simpledialog import askstring
 from tkinter.filedialog import asksaveasfilename
+
+from tkmacosx import Button as MacOsButton
+
+if platform.system() == "Darwin":
+  Button = MacOsButton
 
 import lib.lan_helpers as lh
 
@@ -43,7 +48,7 @@ class GamePage(Frame):
     self.run()
 
   def run(self):
-    if self.server_not_found:
+    if self.server_not_found or self.lan_cancelled:
       self.destroy()
     else:
       self.draw_main_frame()
@@ -63,6 +68,7 @@ class GamePage(Frame):
     self.is_challenged = False  # Necessary for lan game
     self.letters_passed = False # Necessary for lan game
     self.server_not_found = False # Necessary for lan game
+    self.lan_cancelled = False # Necessary for lan game
 
     self.first_turn = True
     self.game_online = True
@@ -98,17 +104,23 @@ class GamePage(Frame):
 
   def resolve_options(self, options):
     if self.joined_lan:
+      search = True
+
       if not options.get('ip', None):
-        showinfo('Searching...',
+        search = askyesno('Searching...',
                  'Will try to find a hosted game. This might take a while depending on the computer.\n\nClick OK to start.')
 
+      if search:
       # If a server is not found, a single value False comes
       # from the queue causing an exception.
-      try:
-        self.options, self.own_mark = self.queue.get()
-      except:
+        try:
+          self.options, self.own_mark = self.queue.get()
+        except:
+          self.options = options
+          self.server_not_found = True
+      else:
         self.options = options
-        self.server_not_found = True
+        self.lan_cancelled = True
     else:
       self.options = options
 
@@ -176,21 +188,21 @@ class GamePage(Frame):
     button_f = Frame(out_f, bg='azure')
     button_f.pack(side=TOP)
 
-    self.sub = Button(button_f, text='Submit')
+    self.sub = Button(button_f, bg="black", fg="white", text='Submit')
     self.sub.config(command=self.process_word)
     self.sub.pack(side=LEFT, padx=5)
 
-    self.pas = Button(button_f, text='Pass')
+    self.pas = Button(button_f, bg="black", fg="white", text='Pass')
     self.pas.config(command=self.pass_letters)
     self.pas.pack(side=LEFT, padx=5)
 
     if self.chal_mode:
-      self.chal = Button(button_f, text='Challenge')
+      self.chal = Button(button_f, bg="black", fg="white", text='Challenge')
       self.chal.config(command=self.challenge)
       self.chal.pack(side=LEFT, padx=5)
 
     if self.norm_mode:
-      Button(button_f, text='Reveal', command=self.reveal_tile).pack()
+      Button(button_f, bg="black", fg="white", text='Reveal', command=self.reveal_tile).pack()
 
   def determine_tile_background(self, tile):
     if tile.name in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
@@ -212,7 +224,7 @@ class GamePage(Frame):
     info_frame = Frame(self, bg='azure')
     info_frame.pack(side=LEFT, fill=BOTH)
 
-    self.sav = Button(info_frame, text='Save Game')
+    self.sav = Button(info_frame, bg="black", fg="white", text='Save Game')
     self.sav.config(command=self.save_game)
     self.sav.pack(side=TOP, pady=50)
 
@@ -975,7 +987,7 @@ class GamePage(Frame):
 
   def challenge(self, pack=None):
     for word in self.prev_words:
-      if not self.dict.valid_word(word):
+      if not self.dict.is_valid_word(word):
         self.players[self.cur_play_mark - 1].update_score(self.word.points)
 
         # Substract full bonus if applicable
@@ -1110,8 +1122,8 @@ class GamePage(Frame):
     button_f = Frame(pop)
     button_f.pack(side=TOP, pady=20)
 
-    Button(button_f, text='Quit', command=lambda: self.quit_game(pop)).pack(side=LEFT, padx=15)
-    Button(button_f, text='Restart', command=self.restart_game).pack(side=LEFT)
+    Button(button_f, bg="black", fg="white", text='Quit', command=lambda: self.quit_game(pop)).pack(side=LEFT, padx=15)
+    Button(button_f, bg="black", fg="white", text='Restart', command=self.restart_game).pack(side=LEFT)
 
     pop.grab_set()
     pop.focus_set()
@@ -1201,6 +1213,9 @@ class GamePage(Frame):
       showwarning('Game Not Found', 'There are no hosted games.')
       # Prevent infinite loop
       self.server_not_found = False
+      self.restart_game()
+    elif self.lan_cancelled:
+      self.lan_cancelled = False
       self.restart_game()
 
     if self.lan_mode:
