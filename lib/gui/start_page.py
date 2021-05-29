@@ -6,15 +6,6 @@ import random, platform
 
 from tkinter import *
 
-from tkmacosx import Button as MacOsButton
-# from tkmacosx import Checkbutton as MacOSCheckbutton
-from tkmacosx import Radiobutton as MacOSRadiobutton
-
-if platform.system() == "Darwin":
-  Button = MacOsButton
-  # Checkbutton = MacOSCheckbutton
-  Radiobutton = MacOSRadiobutton
-
 from lib.gui.game_page import GamePage
 
 class StartPage(Frame):
@@ -47,7 +38,7 @@ class StartPage(Frame):
     Label(self, text='OPTIONS', font=('times', 35, 'italic'), bg='azure', pady=40).pack(side=TOP)
 
   def draw_secondary_options(self):
-    cb = Checkbutton(self, highlightbackground='azure', fg="black", text='Challenge Mode', variable=self.chal_var)
+    cb = Checkbutton(self, bg="azure", text='Challenge Mode', variable=self.chal_var)
     cb.pack(pady=15)
     cb.deselect()
 
@@ -67,7 +58,13 @@ class StartPage(Frame):
     Entry(f2, textvariable=self.point_var, width=3).pack(side=LEFT)
     self.point_var.set(0)
 
-    Button(self, bg="black", fg="white", textvariable=self.but_var, command=self.construct_options).pack(pady=10)
+    f3 = Frame(self, bg='azure')
+    f3.pack(pady=10)
+
+    Button(f3, text="Back", command=self.destroy).pack(side=LEFT, padx=10)
+    Button(f3, textvariable=self.but_var, command=self.construct_options).pack(side=LEFT)
+    
+
 
   def draw_player_name(self): pass
 
@@ -101,7 +98,7 @@ class LANStartPage(StartPage):
     pof.pack()
 
     for k, v in self.play_dict.items():
-      r = Radiobutton(pof, bg="black", fg="black", text=k, variable=self.play_var, value=v)
+      r = Radiobutton(pof, bg="azure", text=k, variable=self.play_var, value=v)
       r.pack(anchor=NW)
 
     self.play_var.set(2)
@@ -136,7 +133,7 @@ class NormalStartPage(StartPage):
     pof.pack()
 
     for k, v in self.play_dict.items():
-      r = Radiobutton(pof, bg="azure", fg="black", text=k, variable=self.play_var, value=v)
+      r = Radiobutton(pof, bg="azure", text=k, variable=self.play_var, value=v)
       r.pack(anchor=NW)
 
     self.play_var.set(2)

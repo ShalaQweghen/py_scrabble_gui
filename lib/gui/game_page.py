@@ -9,11 +9,6 @@ from tkinter.messagebox import askyesno, showwarning, showinfo
 from tkinter.simpledialog import askstring
 from tkinter.filedialog import asksaveasfilename
 
-from tkmacosx import Button as MacOsButton
-
-if platform.system() == "Darwin":
-  Button = MacOsButton
-
 import lib.lan_helpers as lh
 
 from lib.dic import Dict
@@ -188,21 +183,21 @@ class GamePage(Frame):
     button_f = Frame(out_f, bg='azure')
     button_f.pack(side=TOP)
 
-    self.sub = Button(button_f, bg="black", fg="white", text='Submit')
+    self.sub = Button(button_f, text='Submit')
     self.sub.config(command=self.process_word)
     self.sub.pack(side=LEFT, padx=5)
 
-    self.pas = Button(button_f, bg="black", fg="white", text='Pass')
+    self.pas = Button(button_f, text='Pass')
     self.pas.config(command=self.pass_letters)
     self.pas.pack(side=LEFT, padx=5)
 
     if self.chal_mode:
-      self.chal = Button(button_f, bg="black", fg="white", text='Challenge')
+      self.chal = Button(button_f, text='Challenge')
       self.chal.config(command=self.challenge)
       self.chal.pack(side=LEFT, padx=5)
 
     if self.norm_mode:
-      Button(button_f, bg="black", fg="white", text='Reveal', command=self.reveal_tile).pack()
+      Button(button_f, text='Reveal', command=self.reveal_tile).pack()
 
   def determine_tile_background(self, tile):
     if tile.name in 'a1 a8 a15 h15 o15 h1 o8 o1'.split():
@@ -224,7 +219,7 @@ class GamePage(Frame):
     info_frame = Frame(self, bg='azure')
     info_frame.pack(side=LEFT, fill=BOTH)
 
-    self.sav = Button(info_frame, bg="black", fg="white", text='Save Game')
+    self.sav = Button(info_frame, text='Save Game')
     self.sav.config(command=self.save_game)
     self.sav.pack(side=TOP, pady=50)
 
@@ -1122,8 +1117,8 @@ class GamePage(Frame):
     button_f = Frame(pop)
     button_f.pack(side=TOP, pady=20)
 
-    Button(button_f, bg="black", fg="white", text='Quit', command=lambda: self.quit_game(pop)).pack(side=LEFT, padx=15)
-    Button(button_f, bg="black", fg="white", text='Restart', command=self.restart_game).pack(side=LEFT)
+    Button(button_f, text='Quit', command=lambda: self.quit_game(pop)).pack(side=LEFT, padx=15)
+    Button(button_f, text='Restart', command=self.restart_game).pack(side=LEFT)
 
     pop.grab_set()
     pop.focus_set()
